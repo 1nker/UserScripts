@@ -14,10 +14,6 @@
 
 + [Picviewer CE+ ![](https://img.shields.io/greasyfork/dt/24204) ![](https://img.shields.io/greasyfork/dd/24204)](Picviewer%20CE%2B)
 
-+ [Kill Baidu AD 百度廣告清理 ![](https://img.shields.io/greasyfork/dt/24192)](Kill%20Baidu%20AD)
-
-+ [Kill TieBa AD 貼吧偽裝廣告清理 ![](https://img.shields.io/greasyfork/dt/24171)](Kill%20TieBa%20AD)
-
 + [Select All Checkboxes 多選框伴侶 ![](https://img.shields.io/greasyfork/dt/22587)](Select%20All%20Checkboxes)
 
 + [MoreSteamRatings Steam遊戲評分集 ![](https://img.shields.io/greasyfork/dt/24113)](MoreSteamRatings)
@@ -30,17 +26,15 @@
 
 + [DownloadAllContent 怠惰小說下載器 ![](https://img.shields.io/greasyfork/dt/25068) ![](https://img.shields.io/greasyfork/dd/25068)](DownloadAllContent)
 
-+ [Disable AD of ThisAV ThisAV去廣告 ![](https://img.shields.io/greasyfork/dt/25297)](Disable%20AD%20of%20ThisAV)
-
 + [JandanHero 煎蛋俠 ![](https://img.shields.io/greasyfork/dt/25597)](JiandanHero)
 
-+ [Pagetual 東方永頁機 ![](https://img.shields.io/greasyfork/dt/438684) ![](https://img.shields.io/greasyfork/dd/438684)](Pagetual) 
++ [Pagetual 東方永頁機 ![](https://img.shields.io/greasyfork/dt/438684) ![](https://img.shields.io/greasyfork/dd/438684)](https://pagetual.hoothin.com/) 
 
-+ [SearchJumper 搜索醬 ![](https://img.shields.io/greasyfork/dt/445274) ![](https://img.shields.io/greasyfork/dd/445274)](https://github.com/hoothin/SearchJumper)
++ [SearchJumper 搜索醬 ![](https://img.shields.io/greasyfork/dt/445274) ![](https://img.shields.io/greasyfork/dd/445274)](https://search.hoothin.com/)
 
 ---
 ## Contributors
 
 <a href="https://github.com/hoothin/UserScripts/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=hoothin/UserScripts" />
+  <img src="https://contrib.rocks/image?repo=hoothin/UserScripts&max=400&columns=15" />
 </a>

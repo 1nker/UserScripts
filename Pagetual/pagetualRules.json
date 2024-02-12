@@ -1,5 +1,16 @@
 [
 {
+    "name": "Podium Audio",
+    "author": "uwuceo with help from Hoothin",
+    "url": "^https?://podiumaudio\\.com",
+    "example": "https://podiumaudio.com/browse-titles/",
+    "pageElement": "div.browse-all-titles-grid-container > div.inner > div",
+    "loadMore": "div.load-more-section > a",
+    "css": ".loading{opacity: 1;}",
+    "autoClick": "div.load-more-section > a",
+    "rate": 5
+},
+{
     "name": "PubMed",
     "author": "1nker",
     "url": "^https?://pubmed\\.ncbi\\.nlm\\.nih\\.gov/",
@@ -9249,6 +9260,15 @@
     "wait": 1000
 },
 {
+    "name": "中国知网 AdvSearch",
+    "url": "^https://kns\\.cnki\\.net/kns8s/AdvSearch",
+    "nextLink": "a#PageNext",
+    "pageElement": ".result-table-list tbody>*",
+    "refreshByClick": ".search-btn",
+    "initRun": 0,
+    "wait": 1000
+},
+{
     "name": "图怪兽",
     "url": "^https://818ps\\.com/",
     "pageElement": "#masonry"
@@ -9451,9 +9471,10 @@
     "name": "bilibili space",
     "url": "^https://space\\.bilibili\\.com/",
     "sandbox": false,
-    "pageElement": "ul.cube-list>li,ul.video-list>li,ul.relation-list>li",
+    "pageElement": "ul.cube-list>li,ul.video-list>li,ul.relation-list>li,ul.content>li",
     "nextLink": ".be-pager-next,.next-page",
-    "wait": 1000
+    "wait": 1000,
+    "css": ".b-img.sleepy .b-img__inner{opacity:1}"
 },
 {
     "name": "动漫屋1",
@@ -10440,13 +10461,13 @@
     "pageAction": "eles.forEach(ele=>{if(ele.classList.contains('show_poster_preview')){ele.onmouseenter=e=>{document.querySelector('#pop_poster_preview_box').innerHTML=`<img style='width: 100%; height: auto; display: block;' src='${ele.dataset.poster_url}' border='0'>`;document.getElementById('pop_poster_preview_box').style.display='block'};ele.onmouseleave=e=>{document.getElementById('pop_poster_preview_box').style.display='none'}}})"
 },
 {
-    "name": "观察者网",
+    "name": "观察者网评论区",
     "url": "^https?://www\\.guancha\\.cn/",
     "example": "https://www.guancha.cn/economy/2023_10_27_713575_2.shtml",
-    "nextLink": "a.next",
+    "nextLink": "li>a.next",
     "pageElement": ".comment-list > ul.list-body.list-body-all > li.comment-item.cmt-item",
     "include": "#comments-container",
-    "waitElement": "a.next"
+    "waitElement": "li>a.next"
 },
 {
     "name": "威锋",

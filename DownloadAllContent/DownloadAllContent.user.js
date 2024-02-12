@@ -4,11 +4,11 @@
 // @name:zh-TW   怠惰小説下載器
 // @name:ja      怠惰者小説ダウンロードツール
 // @namespace    hoothin
-// @version      2.8.3
-// @description  Fetch and download main textual content from the current page, provide special support for novels
-// @description:zh-CN  通用网站内容抓取工具，可批量抓取任意站点的小说、论坛内容等并保存为TXT文档
-// @description:zh-TW  通用網站內容抓取工具，可批量抓取任意站點的小說、論壇內容等並保存為TXT文檔
-// @description:ja     ユニバーサルサイトコンテンツクロールツール、クロール、フォーラム内容など
+// @version      2.8.3.4
+// @description  Lightweight web scraping script. Fetch and download main textual content from the current page, provide special support for novels
+// @description:zh-CN  通用网站内容爬虫抓取工具，可批量抓取任意站点的小说、论坛内容等并保存为TXT文档
+// @description:zh-TW  通用網站內容爬蟲抓取工具，可批量抓取任意站點的小說、論壇內容等並保存為TXT文檔
+// @description:ja     軽量なWebスクレイピングスクリプト。ユニバーサルサイトコンテンツクロールツール、クロール、フォーラム内容など
 // @author       hoothin
 // @match        http://*/*
 // @match        https://*/*
@@ -611,6 +611,7 @@ if (window.top != window.self) {
                     float: initial;
                     background-image: initial;
                     height: fit-content;
+                    color: black;
                 }
                 #filterListContainer.customRule .dacCustomRule {
                     display: flex;
@@ -951,7 +952,7 @@ if (window.top != window.self) {
                                 downNum--;
                                 setTimeout(() => {
                                     requestDoc();
-                                }, 500);
+                                }, Math.random() * 500 + validTimes * 1000);
                                 return;
                             }
                             if (wait) {
@@ -965,7 +966,7 @@ if (window.top != window.self) {
                             if(tryTimes++ < 5){
                                 setTimeout(() => {
                                     requestDoc();
-                                }, 500);
+                                }, Math.random() * 500 + tryTimes * 1000);
                                 return;
                             }
                             downIndex++;
@@ -978,12 +979,12 @@ if (window.top != window.self) {
                             } else downOnce();
                         },
                         ontimeout: function(e) {
-                            console.warn("timeout: times="+tryTimes+" url="+aTag.href);
+                            console.warn("timeout: times="+(tryTimes+1)+" url="+aTag.href);
                             //console.log(e);
                             if(tryTimes++ < 5){
                                 setTimeout(() => {
                                     requestDoc();
-                                }, 500);
+                                }, Math.random() * 500 + tryTimes * 1000);
                                 return;
                             }
                             downIndex++;
@@ -998,7 +999,7 @@ if (window.top != window.self) {
                     });
                 };
                 if (useIframe) {
-                    let iframe = document.createElement('iframe'), inited = false;
+                    let iframe = document.createElement('iframe'), inited = false, failedTimes = 0;
                     iframe.name = 'pagetual-iframe';
                     iframe.width = '100%';
                     iframe.height = '1000';
@@ -1009,7 +1010,7 @@ if (window.top != window.self) {
                         if (e.data != 'pagetual-iframe:DOMLoaded' && e.type != 'load') return;
                         if (inited) return;
                         inited = true;
-                        function checkIframe() {
+                        async function checkIframe() {
                             try {
                                 let doc = iframe.contentDocument || iframe.contentWindow.document;
                                 if (!doc || !doc.body) {
@@ -1020,11 +1021,47 @@ if (window.top != window.self) {
                                 }
                                 doc.body.scrollTop = 9999999;
                                 doc.documentElement.scrollTop = 9999999;
-                                if (!processFunc && validTimes++ > 5) {
+                                if (!processFunc && validTimes++ > 5 && failedTimes++ < 2) {
                                     iframe.src = iframe.src;
                                     validTimes = 0;
                                     inited = false;
                                     return;
+                                }
+                                let base = doc.querySelector("base");
+                                let nextPages = !disableNextPage && !processFunc && await checkNextPage(doc, base ? base.href : aTag.href);
+                                if (nextPages) {
+                                    if (!nextPages.length) nextPages = [nextPages];
+                                    nextPages.forEach(nextPage => {
+                                        var inArr=false;
+                                        for(var ai=0;ai<aEles.length;ai++){
+                                            if(aEles[ai].href==nextPage.href){
+                                                inArr=true;
+                                                break;
+                                            }
+                                        }
+                                        if(!inArr){
+                                            nextPage.innerText=aTag.innerText+"\t>>";
+                                            aEles.push(nextPage);
+                                            let targetIndex = curIndex;
+                                            for(let a=0;a<insertSigns.length;a++){
+                                                let signs=insertSigns[a],breakSign=false;
+                                                if(signs){
+                                                    for(let b=0;b<signs.length;b++){
+                                                        let sign=signs[b];
+                                                        if(sign==curIndex){
+                                                            targetIndex=a;
+                                                            breakSign=true;
+                                                            break;
+                                                        }
+                                                    }
+                                                }
+                                                if(breakSign)break;
+                                            }
+                                            let insertSign = insertSigns[targetIndex];
+                                            if(!insertSign)insertSigns[targetIndex] = [];
+                                            insertSigns[targetIndex].push(aEles.length-1);
+                                        }
+                                    });
                                 }
                                 if (customTitle) {
                                     try {
@@ -1038,7 +1075,7 @@ if (window.top != window.self) {
                                 }
                                 downIndex++;
                                 downNum++;
-                                let validData = processDoc(curIndex, aTag, doc, "", true);
+                                let validData = processDoc(curIndex, aTag, doc, "", failedTimes < 2);
                                 if (!validData) {
                                     downIndex--;
                                     downNum--;
@@ -1249,6 +1286,7 @@ if (window.top != window.self) {
 
     function getPageContent(doc, cb, url){
         if(!doc)return i18n.error;
+        if(doc.body && !doc.body.children.length)return doc.body.innerText;
         if(processFunc){
             return processFunc(doc, cb, url);
         }
@@ -1532,7 +1570,7 @@ if (window.top != window.self) {
                     })
                     exmpEles.forEach(e=>{
                         var cssSelStr="a",pa=e.parentNode,excludeTxt=excludeTxts[e];
-                        if(e.className)cssSelStr+="."+CSS.escape(e.className);
+                        if(e.className)cssSelStr+="."+CSS.escape(e.className.replace(/\s+/g, ".")).replace(/\\\./g, '.');
                         while(pa && pa.nodeName!="BODY"){
                             cssSelStr=pa.nodeName+">"+cssSelStr;
                             pa=pa.parentNode;
@@ -1619,6 +1657,11 @@ if (window.top != window.self) {
                             iframeInit = iframeInit[1];
                         }
                     }
+                }
+                let charsetMatch = evalCode.match(/^charset:{(.+?)}/);
+                if (charsetMatch) {
+                    charset = charsetMatch[1];
+                    evalCode = evalCode.replace(charsetMatch[0], "");
                 }
                 let nextMatch = evalCode.match(/^next:(\{+)/);
                 if (nextMatch) {

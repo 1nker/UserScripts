@@ -251,7 +251,7 @@ var siteInfo = [
  r: /\d+_\d+\/|\d+_x\d+\.jpg$|@\d+w_\d+h.*\.webp$|_\d+x\d+\.jpg$/i,
  s: ""
 },
-{
+/*{
  name: "deviantart",
  example: "http://www.deviantart.com",
  enabled:true,
@@ -288,6 +288,34 @@ var siteInfo = [
      }
      return null;
  },
+},
+{
+    name:"deviantart",
+    url:/^https?:\/\/[^.]*\.deviantart\.com/i,
+    xhr: {
+        q: '[property="contentUrl"]'
+    },
+    getImage: function(a, p) {
+        if (a && a.dataset.hook == "deviation_link") {
+            return a.href;
+        }
+    }
+},*/
+{
+    name:"deviantart",
+    url:/^https?:\/\/[^.]*\.deviantart\.com/i,
+    getImage: function(a, p) {
+        if (!a) return;
+        let media =Object.keys(a).filter(prop => prop.indexOf("__reactProps") === 0);
+        if (!media || !a[media] || !a[media].children || !a[media].children.props || !a[media].children.props.deviation) return;
+        media = a[media].children.props.deviation.media;
+        let fullview = media.types.filter(d => d.t === "fullview");
+        let ext = media.baseUri.match(/\.\w+$/);
+        if (!fullview || !ext) return;
+        fullview = fullview[0];
+        ext = ext[0];
+        return media.baseUri + `/v1/fill/w_${fullview.w},h_${fullview.h}/${media.prettyName}-fullview${ext}?token=` + media.token[0];
+    }
 },
 {
  name: '花瓣网',
@@ -624,8 +652,10 @@ var siteInfo = [
      if (newsrc != this.src) {
         if (a && a.role == 'link') {
             let match = a.href.match(/\/([^\/]+)\/status\/([^\/]+)\/photo\/(\d+)/);
-            let time = p[14].querySelector('time');
-            this.alt = match[1] + " - " + time.innerText + "_" + match[3];
+            let time = p[14] && p[14].querySelector('time');
+            if (time) {
+                this.alt = match[1] + " - " + time.innerText + "_" + match[3];
+            }
         }
         return newsrc+"&name=orig";
      }

@@ -2,12 +2,12 @@
 // @name         SearchJumper
 // @name:zh-CN   搜索酱
 // @name:zh-TW   搜尋醬
-// @name:ja      検索ちゃん - SearchJumper
+// @name:ja      SearchJumper
 // @namespace    hoothin
-// @version      1.7.61
-// @description  Assist with the seamless transition between any search engine(Google/Bing/Custom), providing the ability to swiftly navigate to any platform and conduct searches effortlessly. Additionally, it allows for the selection of text, images, or links to be searched on any search engine with a simple right-click or by utilizing a range of menus and shortcuts.
-// @description:zh-CN  高效搜索辅助，在搜索时一键切换任何搜索引擎(百度/必应/谷歌等)，支持划词右键搜索、页内关键词查找与高亮、可视化操作模拟、高级自定义等
-// @description:zh-TW  高效搜尋輔助，在搜尋時一鍵切換任意搜尋引擎，支援劃詞右鍵搜尋、頁內關鍵詞查找與高亮、可視化操作模擬、高級自定義等
+// @version      1.7.73
+// @description  Most powerful aggregated search extension providing the ability to conduct searches effortlessly. Navigate to any search engine(Google/Bing/Custom) swiftly.
+// @description:zh-CN  最强聚合搜索插件，在搜索时一键切换任何搜索引擎(百度/必应/谷歌等)，支持划词右键搜索、页内关键词查找与高亮、可视化操作模拟、高级自定义等
+// @description:zh-TW  在搜尋時一鍵切換任意搜尋引擎，支援劃詞右鍵搜尋、頁內關鍵詞查找與高亮、可視化操作模擬、高級自定義等
 // @description:ja  任意の検索エンジンにすばやく簡単にジャンプします！
 // @author       hoothin
 // @license      MPL-2.0
@@ -45,6 +45,7 @@
 // @homepage     https://github.com/hoothin/SearchJumper
 // @downloadURL  https://greasyfork.org/scripts/445274-searchjumper/code/SearchJumper.user.js
 // @updateURL    https://greasyfork.org/scripts/445274-searchjumper/code/SearchJumper.meta.js
+// @require      https://update.greasyfork.org/scripts/484118/searchJumperDefaultConfig.js
 // @connect      global.bing.com
 // @connect      suggestqueries.google.com
 // @connect      api.bing.com
@@ -74,323 +75,13 @@
     }
     const importPageReg = /^https:\/\/github\.com\/hoothin\/SearchJumper(\/(issue|discussions)|$)|^https:\/\/greasyfork\.org\/.*\/scripts\/445274[\-\/].*\/discussions/i;
     const mobileUa = "Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1";
+    const firstRunPage = "https://search.hoothin.com/firstRun";
     let configPage = 'https://search.hoothin.com/config/';
     let isAllPage = false;
 
     let searchData = {};
-    searchData.sitesConfig = [
-        {
-            type: "Translate",
-            icon: "language",
-            sites: [ {
-                name: "DeepL",
-                url: "https://www.deepl.com/translator#zh/en/%s",
-                icon: "https://www.deepl.com/img/favicon/favicon_96.png"
-            }, {
-                name: "Google translate",
-                url: "https://translate.google.com/?text=%s",
-                match: "translate\\.google\\.com.*\\btext="
-            }, {
-                name: "Bing translate",
-                url: "http://www.bing.com/dict/search?q=%s"
-            }, {
-                name: "Translate with ChatGPT",
-                url: "https://poe.com/ChatGPT#p{sleep(1000)&[class*\\='ChatMessageInputContainer'] textarea=Please help me to translate \\`%s\\` to English, please return only translated content not include the origin text&click(button[class*\\='ChatMessageSendButton_sendButton'])}"
-            } ]
-        },
-        {
-            type: "Video",
-            icon: "video",
-            sites: [ {
-                name: "bilibili",
-                url: "https://search.bilibili.com/all?keyword=%s"
-            }, {
-                name: "Youtube",
-                url: "https://www.youtube.com/results?search_query=%s"
-            }, {
-                name: "niconico",
-                url: "https://www.nicovideo.jp/search/%s"
-            } ]
-        },
-        {
-            type: "Music",
-            icon: "music",
-            sites: [ {
-                name: "163 Music",
-                url: "https://music.163.com/#/search/m/?s=%s"
-            }, {
-                name: "QQ Music",
-                url: "https://y.qq.com/portal/search.html#page=1&searchid=1&remoteplace=txt.yqq.top&t=song&w=%s"
-            }, {
-                name: "Jango",
-                url: "https://www.jango.com/music/%s"
-            } ]
-        },
-        {
-            type: "Social",
-            icon: "users",
-            sites: [ {
-                name: "Twitter",
-                url: "https://twitter.com/search/%s"
-            }, {
-                name: "Facebook",
-                url: "https://www.facebook.com/search/results.php?q=%s"
-            } ]
-        },
-        {
-            type: "Image",
-            icon: "image",
-            sites: [ {
-                name: "Google image",
-                url: "https://www.google.com/search?q=%s&tbm=isch",
-                match: "www\\.google\\..*tbm=isch"
-            }, {
-                name: "Bing image",
-                url: "https://www.bing.com/images/search?q=%s"
-            }, {
-                name: "pixiv",
-                url: "https://www.pixiv.net/search.php?word=%s"
-            }, {
-                name: "flickr",
-                url: "https://www.flickr.com/search/?q=%s"
-            } ]
-        },
-        {
-            type: "News",
-            icon: "newspaper",
-            sites: [ {
-                name: "Google news",
-                url: "https://news.google.com/search?q=%s&hl=zh-CN&gl=CN&ceid=CN:zh-Hans",
-                icon: "https://www.google.com/favicon.ico"
-            }, {
-                name: "CNN",
-                url: "https://edition.cnn.com/search/?q=%s"
-            }, {
-                name: "BBC",
-                url: "https://www.bbc.co.uk/search?q=%s"
-            } ]
-        },
-        {
-            type: "Search",
-            icon: "search",
-            sites: [ {
-                name: "Bing",
-                url: "https://www.bing.com/search?q=%s",
-                match: "^https://(www|cn|global)\\.bing\\.com/search"
-            }, {
-                name: "Baidu",
-                url: "https://www.baidu.com/s?wd=%s&ie=utf-8",
-                keywords: "(?:wd|word)=(.*?)(&|$)",
-                match: "https?://(www|m)\\.baidu\\.com/.*(wd|word)="
-            }, {
-                name: "Google advanced",
-                url: "https://www.google.com/search?q=%s%input{Filetype, filetype:doc/ filetype:ppt/ filetype:xls/ filetype:pdf}%input{Limit lang/zh-CN/zh-TW/CN/EN,&lr=lang_zh-CN/&lr=lang_zh-TW/&lr=lang_zh-CN|lang_zh-TW/&lr=lang_en}%input{Limit date/Last hour/Last day/Last week/Last month/Last year,&as_qdr=h1/&as_qdr=d1/&as_qdr=w1/&as_qdr=m1/&as_qdr=y1}&ie=utf-8&oe=utf-8",
-                match: "https://www\\.google\\..*/search",
-                hideNotMatch: true
-            } ]
-        },
-        {
-            type: "Search in page",
-            icon: "sitemap",
-            selectTxt: true,
-            openInNewTab: true,
-            sites: [ {
-                name: "Google",
-                url: "https://www.google.com/search?q=%s&ie=utf-8&oe=utf-8",
-                match: "https://www\\.google\\..*/search",
-            }, {
-                name: "Wikipedia ",
-                url: "[\"Wikipedia\"]"
-            }, {
-                name: "📄 Copy",
-                url: "copy:%sr",
-                nobatch: true
-            }, {
-                name: "🔆 Highlight",
-                url: "find:%sr",
-                nobatch: true
-            }, {
-                name: "🔗 Open text link",
-                url: "%sr.replace(/。/g,\".\").replace(/[^ \\w\\-_\\.~!\\*'\\(\\);:@&=\\+\\$,\\/\\?#\\[\\]%]/g,\"\").replace(/ /g,\"\").replace(/^/,\"http://\").replace(/^http:\\/\\/(https?:)/,\"$1\")",
-                kwFilter: "\\w.*\\..*\\w",
-                nobatch: true
-            }, {
-                name: "Google Search in site",
-                url: "https://www.google.com/search?q=%s%20site%3A%h&ie=utf-8&oe=utf-8",
-            }, {
-                name: "Words to QRCode",
-                url: "https://cli.im/text#p{#text-content=%s&click(#click-create)}"
-            }, {
-                name: "💲 USD to RMB",
-                url: "showTips:http://apilayer.net/api/convert?from=USD&to=CNY&amount=1&access_key=%template{apilayer key} \n{name}<br/><i>%s USD = {json.result|*%s.replace(/\D/,'')} RMB</i>",
-                kwFilter: "\\d\\$|\\$\\d"
-            } ]
-        },
-        {
-            type: "Search by image",
-            icon: "eye",
-            selectImg: true,
-            openInNewTab: true,
-            sites: [ {
-                name: "Google search by image",
-                url: "https://www.google.com/searchbyimage?sbisrc=cr_1_0_0&image_url=%T"
-            }, {
-                name: "Google translate image",
-                url: "https://translate.google.com/?op=images#p{input[accept^\\=\"image\"]=%i}"
-            }, {
-                name: "QR decode",
-                url: "https://hoothin.com/qrdecode/#%U"
-            }, {
-                name: "SauceNAO",
-                url: "https://saucenao.com/search.php?db=999&url=%t"
-            }, {
-                name :"IQDB",
-                url: "https://iqdb.org/?url=%t"
-            }, {
-                name: "Lunapic",
-                url: "https://www.lunapic.com/editor/index.php?action=url&url=%t"
-            }, {
-                name: "Pixlr easy",
-                url: "https://pixlr.com/x/#p{click(#home-open-url)&#image-url=%t&click(.dialog>.buttons>a.button.positive)}"
-            }, {
-                name: "Bing search by image",
-                url: "https://www.bing.com/images/search?view=detailv2&iss=sbi&form=SBIVSP&sbisrc=UrlPaste&q=imgurl:%t"
-            }, {
-                name: "TinEye",
-                url: "https://www.tineye.com/search?url=%t"
-            } ]
-        },
-        {
-            type: "VIP",
-            icon: "key",
-            match: "://v\\.qq\\.com/x/",
-            sites: []
-        },
-        {
-            type: "Scholar",
-            icon: "graduation-cap",
-            sites: [ {
-                name: "Scholar",
-                url: "http://scholar.google.com/scholar?hl=zh-CN&q=%s"
-            }, {
-                name: "Google Book",
-                url: "https://www.google.com/search?q=%s&tbm=bks&tbo=1&hl=zh-CN&gws_rd=ssl"
-            }, {
-                name: "krugle",
-                url: "http://opensearch.krugle.org/document/search/#query=%s",
-                icon: "https://opensearch.krugle.org/media/images/favicon.ico"
-            }, {
-                name: "npm",
-                url: "https://www.npmjs.org/search?q=%s",
-                icon: "https://static.npmjs.com/b0f1a8318363185cc2ea6a40ac23eeb2.png"
-            } ]
-        },
-        {
-            type: "Developer",
-            icon: "code",
-            sites: [ {
-                name: "MDN",
-                url: "https://developer.mozilla.org/zh-CN/search?q=%s"
-            }, {
-                name: "stackoverflow",
-                url: "https://stackoverflow.com/search?q=%s"
-            }, {
-                name: "Can I Use",
-                url: "http://caniuse.com/#search=%s",
-                icon: "https://caniuse.com/img/favicon-128.png"
-            }, {
-                name: "GitHub",
-                url: "https://github.com/search?utf8=✓&q=%s",
-                match: "https://github\\.com/search\\?.*[&\?]q="
-            }, {
-                name: "w3c",
-                url: "http://www.runoob.com/?s=%s"
-            } ]
-        },
-        {
-            type: "Wiki",
-            icon: "book-open-reader",
-            sites: [ {
-                name: "Wikipedia",
-                url: "https://en.wikipedia.org/wiki/%s",
-                description: "The largest and most-read reference work in history.#wiki"
-            }, {
-                name: "Quora",
-                url: "https://www.quora.com/search?q=%s"
-            } ]
-        },
-        {
-            type: "Shopping",
-            icon: "shopping-cart",
-            sites: [ {
-                name: "Amazon",
-                url: "http://www.amazon.com/s/ref=nb_sb_noss?field-keywords=%s"
-            }, {
-                name: "1688",
-                url: "https://s.1688.com/selloffer/offer_search.htm?keywords=%s"
-            } ]
-        },
-        {
-            type: "Assit",
-            icon: "list-alt",
-            selectTxt: true,
-            selectImg: true,
-            selectAudio: true,
-            selectVideo: true,
-            selectLink: true,
-            selectPage: true,
-            openInNewTab: true,
-            sites: [ {
-                name: "QR code",
-                url: "https://hoothin.com/qrcode/#%U"
-            }, {
-                name: "📦 Batch open links",
-                url: "%s[all]",
-                kwFilter: "^https?:"
-            }, {
-                name: "Share to Twitter",
-                url: "https://twitter.com/intent/tweet?url=%T"
-            }, {
-                name: "Send by Gmail",
-                url: "https://mail.google.com/mail/u/0/?tf=cm&source=mailto&body=%n %T"
-            }, {
-                name: "Share to Facebook",
-                url: "https://www.facebook.com/sharer/sharer.php?u=%T&t=%n"
-            }, {
-                name: "🧮 Calculator",
-                url: "calculator://"
-            }, {
-                name: "🔎 Everything",
-                url: "ES://%s"
-            } ]
-        },
-        {
-            type: "Page",
-            icon: "list",
-            selectLink: true,
-            selectPage: true,
-            openInNewTab: true,
-            sites: [ {
-                name: "🔗 Open url",
-                url: "%t",
-                openInNewTab: true
-            }, {
-                name: "📷 Search cache",
-                url: "https://2tool.top/kuaizhao.php?k=%u"
-            }, {
-                name: "Web archive",
-                url: "https://web.archive.org/web/*/%u",
-                icon: "https://web.archive.org/_static/images/archive.ico"
-            }, {
-                name: "Save archive",
-                url: "https://web.archive.org/save/%u",
-                icon: "https://web.archive.org/_static/images/archive.ico"
-            }, {
-                name: "✏️ Edit current page",
-                url: "javascript:(function(){document.body.setAttribute('contenteditable', 'true');alert('Now you can modify the page, cancel by ESC');document.onkeydown = function (e) {e = e || window.event;if(e.keyCode==27){document.body.setAttribute('contenteditable', 'false');}}})();"
-            } ]
-        }
-    ];
+    if (!sitesConfig) sitesConfig = [];
+    searchData.sitesConfig = sitesConfig;
     searchData.prefConfig = {
         position: {
             x: "left",
@@ -400,6 +91,7 @@
             x: "0",
             y: "0"
         },
+        firstRun: true,
         openInNewTab: false,
         enableInPage: true,
         altKey: false,
@@ -576,7 +268,15 @@
                         Thursday: '星期四 (木)',
                         Friday: '星期五 (金)',
                         Saturday: '星期六 (土)',
-                        template: '请设置【#t#】的值'
+                        template: '请设置【#t#】的值',
+                        recordAction: '录制操作',
+                        startRecord: '开始录制操作，按回车键结束录制',
+                        loopAction: '开始循环',
+                        loopActionEnd: '循环结束',
+                        loopStart: '开始循环，循环次数为<span title="#t#">#t#</span>',
+                        loopEnd: '结束循环',
+                        loopTimes: '循环次数，将遍历所有匹配元素并顺序执行',
+                        loadingCollection: '正在加载合集，请稍候……'
                     };
                     break;
                 case "zh-TW":
@@ -682,7 +382,15 @@
                         Thursday: '星期四 (木)',
                         Friday: '星期五 (金)',
                         Saturday: '星期六 (土)',
-                        template: '請設置【#t#】的值'
+                        template: '請設置【#t#】的值',
+                        recordAction: '錄製動作',
+                        startRecord: '開始錄製操作，按下回車鍵結束錄製',
+                        loopAction: '開始循環',
+                        loopActionEnd: '循環結束',
+                        loopStart: '開始循環，循環次數為<span title="#t#">#t#</span>',
+                        loopEnd: '結束循環',
+                        loopTimes: '循環次數，將遍歷所有匹配元素並順序執行',
+                        loadingCollection: '正在載入合集，請稍候……'
                     };
                     break;
                 case 'ja':
@@ -726,7 +434,7 @@
                         maxEleBtn: '選択した要素を展開',
                         minEleBtn: '選択した要素を折りたたむ',
                         expandAll: 'すべて展開',
-                        collapseAll: 'すべて折りたたむ',
+                        collapseAll: 'すべて折り',
                         rename: '名前を変更',
                         reverseBtn: '検索テキストを復元',
                         pinBtn: '検索テキストを修正、すべてのタブで検索',
@@ -787,7 +495,15 @@
                         Thursday: '木曜日',
                         Friday: '金曜日',
                         Saturday: '土曜日',
-                        template: '[#t#]の値を設定してください'
+                        template: '[#t#]の値を設定してください',
+                        RecordAction: '記録操作',
+                        startRecord: '記録操作を開始します。記録を終了するには Enter キーを押してください',
+                        loopAction: 'ループの開始',
+                        loopActionEnd: 'ループの終了',
+                        loopStart: 'ループを開始。ループ数は <span title="#t#">#t#</span> です',
+                        loopEnd: 'ループの終了',
+                        loopTimes: 'ループの数。一致するすべての要素が走査され、順番に実行されます',
+                        loadingCollection: 'コレクションを読み込み中...'
                     };
                     break;
                 default:
@@ -885,7 +601,15 @@
                         startCache: 'Start cache icons of engines, do not close this page!',
                         cacheOver: 'All icons cached!',
                         cspDisabled: 'The style of SearchJumper is blocked by the CSP of current site, please try to install the Allow CSP: Content-Security-Policy extension to obtain permission',
-                        template: 'Please set the value of "#t#"'
+                        template: 'Please set the value of "#t#"',
+                        recordAction: 'Record operation',
+                        startRecord: 'Start to record operation, press Enter to end',
+                        loopAction: 'Start loop',
+                        loopActionEnd: 'Stop loop',
+                        loopStart: 'Start loop <span title="#t#">#t#</span> times',
+                        loopEnd: 'Stop loop',
+                        loopTimes: 'Number of loops, all matching elements will be traversed and executed sequentially',
+                        loadingCollection: 'Preparing collection for SearchJumper...'
                     };
                     break;
             }
@@ -905,6 +629,7 @@
             }
         };
         var disabled = false;
+        var isInConfigPage = false;
 
         function createHTML(html = "") {
             return escapeHTMLPolicy ? escapeHTMLPolicy.createHTML(html) : html;
@@ -989,15 +714,7 @@
         }
         if (ext) {
             _GM_notification = s => {
-                chrome.notifications.create(
-                  "searchjumper-notification",
-                  {
-                    type: "basic",
-                    iconUrl: "/icon/icon128.png",
-                    title: "SearchJumper",
-                    message: s,
-                  }
-                )
+                chrome.runtime.sendMessage({action: "notification", detail: {message: s}});
             }
         } else if (typeof GM_notification != 'undefined') {
             _GM_notification = s => GM_notification({text: s, onclick: e => _GM_openInTab(configPage, {active: true})});
@@ -1083,7 +800,7 @@
                 var value;
                 if (ext) {
                     let result = await chrome.storage.local.get([key]);
-                    value = result[key];
+                    value = result && result[key];
                 } else if (this.supportGMPromise) {
                     value = await GM.getValue(key);
                 } else if (this.supportGM) {
@@ -1315,7 +1032,8 @@
                 var result = doc.evaluate(xpath, contextNode, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
                 return result.singleNodeValue && result.singleNodeValue.nodeType === 1 && result.singleNodeValue;
             } catch (err) {
-                throw new Error(`Invalid xpath: ${xpath}`);
+                debug(`Invalid xpath: ${xpath}`);
+                return false;
             }
         }
 
@@ -1325,6 +1043,7 @@
         }
 
         function getAllElements(sel, doc, contextNode) {
+            if (!doc) doc = document;
             try {
                 if (!isXPath(sel)) {
                     return doc.querySelectorAll(sel);
@@ -1824,7 +1543,7 @@
                  #search-jumper-alllist>.timeInAll,
                  #search-jumper-alllist>.dayInAll {
                      position: fixed;
-                     bottom: 5%;
+                     bottom: 0;
                      line-height: 1.5;
                      color: white;
                      opacity: 0.35;
@@ -1898,12 +1617,13 @@
                      padding: 0 10px;
                      border-radius: 5px;
                      transition: transform 0.25s ease, box-shadow 0.25s ease;
+                     box-shadow: 0 0 #0000, 0 0 #0000, 0 1px 3px #9e9e9e1a, 0 1px 2px -1px #9e9e9e1a;
                  }
                  #search-jumper #search-jumper-alllist.new-mode .sitelist>.sitelistCon>div:hover {
                      transform: translateY(-6px);
                      -webkit-transform: translateY(-6px);
                      -moz-transform: translateY(-6px);
-                     box-shadow: 0px 5px 28px 0px rgba(65, 106, 123, 0.2);
+                     box-shadow: 0 0 #0000, 0 0 #0000, 0 1px 3px #0000001a, 0 1px 2px -1px #0000001a;
                  }
                  #search-jumper #search-jumper-alllist.new-mode .sitelist>.sitelistCon>div:before {
                      content: attr(title);
@@ -1923,9 +1643,10 @@
                      pointer-events: none;
                  }
                  #search-jumper #search-jumper-alllist.new-mode .sitelist a>img {
-                     width: 32px;
-                     height: 32px;
+                     width: 48px;
+                     height: 48px;
                      float: left;
+                     margin-left: -20px;
                  }
                  #search-jumper #search-jumper-alllist.new-mode .sitelist a>p {
                      -webkit-line-clamp: 2;
@@ -1935,7 +1656,7 @@
                      height: 21px;
                      line-height: 21px;
                      margin-bottom: 8px;
-                     margin-top: 3px;
+                     margin-top: 0px;
                      margin-left: 40px;
                      overflow: hidden;
                      text-overflow: ellipsis;
@@ -1949,6 +1670,7 @@
                      margin-top: -28px;
                      color: white;
                      width: 250px;
+                     max-width: calc(100% - 20px);
                      display: flex;
                      justify-content: space-evenly;
                      overflow: hidden;
@@ -2087,7 +1809,8 @@
                  .in-input.in-find>.search-jumper-input {
                      pointer-events: all;
                  }
-                 .in-input.in-find>.search-jumper-searchBar {
+                 .in-input.in-find>.search-jumper-searchBar,
+                 .in-input.in-pick>.search-jumper-searchBar {
                      opacity: 0!important;
                      pointer-events: none;
                      transition: none;
@@ -2131,10 +1854,10 @@
                  }
                  ${searchData.prefConfig.minPopup ? `
                  #search-jumper.funcKeyCall>.search-jumper-searchBar>.search-jumper-type>a.search-jumper-btn {
-                     visibility: hidden;
+                     display: none;
                  }
                  #search-jumper.funcKeyCall>.search-jumper-searchBar>.search-jumper-type:hover>a.search-jumper-btn {
-                     visibility: visible;
+                     display: grid;
                  }
                  ` : ''}
                  ${searchData.prefConfig.minPopup == 2 ? `
@@ -2148,13 +1871,13 @@
                      max-width: ${40 * (searchData.prefConfig.numPerLine || 7) * this.tilesZoom}px!important;
                  }
                  #search-jumper.funcKeyCall>.search-jumper-searchBar>.search-jumper-type>a.search-jumper-btn {
-                     visibility: visible;
+                     display: grid;
                  }
                  #search-jumper.funcKeyCall.targetInput>.search-jumper-searchBar>.search-jumper-type>a.search-jumper-btn {
-                     visibility: hidden;
+                     display: none;
                  }
                  #search-jumper.funcKeyCall.targetInput>.search-jumper-searchBar>.search-jumper-type:hover>a.search-jumper-btn {
-                     visibility: visible;
+                     display: grid;
                  }
                  ` : ''}
                  #search-jumper.funcKeyCall>.search-jumper-searchBar>.search-jumper-type:hover {
@@ -2670,6 +2393,7 @@
                      text-align: center;
                      box-sizing: content-box;
                      overflow: hidden;
+                     font-family: Roboto,arial,sans-serif;
                  }
                  .search-jumper-tips * {
                      max-width: 640px;
@@ -2686,7 +2410,7 @@
                  .minSizeMode.search-jumper-searchBar:hover>.search-jumper-type:not(.search-jumper-open) {
                      display: none;
                  }
-                 .minSizeModeClose.minSizeMode.search-jumper-searchBar:hover>.search-jumper-type {
+                 .minSizeModeClose.minSizeMode.search-jumper-searchBar:hover>.search-jumper-type:not(.search-jumper-targetImg,.search-jumper-targetLink,.search-jumper-targetPage,.search-jumper-targetVideo,.search-jumper-targetAudio) {
                      display: inline-flex;
                  }
                  .funcKeyCall>.search-jumper-searchBar>.search-jumper-type:not(.search-jumper-open) {
@@ -2899,7 +2623,7 @@
                      height: 35px;
                      position: absolute;
                      user-select: none;
-                     background: #212022;
+                     background: transparent;
                      white-space: nowrap;
                      overflow: hidden;
                      display: flex;
@@ -2976,7 +2700,35 @@
                  }
                  @media screen and (max-width: 600px) {
                      #search-jumper.search-jumper-showall #search-jumper-alllist.new-mode .sitelist {
-                         width: 300px;
+                         width: 95vw;
+                     }
+                     #search-jumper.search-jumper-showall #search-jumper-alllist.new-mode .sitelist>.sitelistCon {
+                         width: calc(100% - 20px);
+                     }
+                     #search-jumper-alllist>.timeInAll, #search-jumper-alllist>.dayInAll {
+                         margin: 10px;
+                     }
+                     #search-jumper #search-jumper-alllist.new-mode .sitelist a {
+                         width: calc(50vw - 45px);
+                     }
+                     #search-jumper #search-jumper-alllist.new-mode .sitelist>.sitelistCon>div:before {
+                         width: 100px;
+                         margin-left: 68px;
+                     }
+                     #search-jumper #search-jumper-alllist.new-mode .sitelist a>img {
+                         margin-left: 0;
+                     }
+                 }
+                 @media screen and (max-width: 380px) {
+                     #search-jumper #search-jumper-alllist.new-mode .sitelist a {
+                         width: calc(100vw - 60px);
+                     }
+                     #search-jumper #search-jumper-alllist.new-mode .sitelist>.sitelistCon>div:before {
+                         width: calc(100vw - 150px);
+                         margin-left: 85px;
+                     }
+                     #search-jumper #search-jumper-alllist.new-mode .sitelist a+p {
+                         width: calc(100vw - 60px);
                      }
                  }
                  @media screen and (max-width: 800px) {
@@ -3908,7 +3660,7 @@
                         e.preventDefault();
                         if (e.target.nodeName.toUpperCase() === 'EM') return;
                         if (e.ctrlKey || e.shiftKey || e.altKey || e.metaKey) return;
-                        if (this.wordModeBtn.classList.contains("checked")) {
+                        if (this.lockWords.indexOf(word.oriWord) === -1) {
                             return;
                         }
                         this.showModifyWindow(word, wordSpan);
@@ -4942,6 +4694,7 @@
                 let self = this;
                 let navMark = document.createElement("span");
                 let top = getElementTop(node);
+                navMark.title = word.title || word.showWords;
                 navMark.dataset.top = top;
                 navMark.dataset.content = word.showWords;
                 let scrollHeight = Math.max(document.documentElement.scrollHeight, getBody(document).scrollHeight);
@@ -4971,7 +4724,7 @@
                         result.text += "\n";
                         result.data[start] = {node: ele, text: "\n"};
                     } else if (ele.offsetParent || ele.offsetHeight) {
-                        if (/^(li|p|a)$/i.test(ele.nodeName)) {
+                        if (/^(li|p|a|td)$/i.test(ele.nodeName)) {
                             let start = result.text.length;
                             result.text += "\n";
                             result.data[start] = {node: {}, text: "\n"};
@@ -5251,6 +5004,7 @@
                                 let curlen = Math.min(leftLen, curnode.text.length - curpos);
                                 leftLen -= curlen;
                                 if (!curnode.text.trim()) {
+                                    if (type === "start") pos += curnode.text.length;
                                     continue;
                                 }
                                 let nodeInfo;
@@ -5943,6 +5697,7 @@
 
             togglePicker() {
                 this.pickerBtn.classList.toggle("checked");
+                this.con.classList.toggle("in-pick");
                 this.searchJumperInputKeyWords.disabled = !this.searchJumperInputKeyWords.disabled;
                 picker.toggle(true);
             }
@@ -6010,7 +5765,7 @@
                 }
                 if (this.addToShadow(this.con)) {
                     setTimeout(() => {
-                        if (this.con.parentNode) {
+                        if (!isAllPage && this.con.parentNode) {
                             if (getComputedStyle(this.con).zIndex != "2147483647") {
                                 this.removeBar();
                                 if (disabled) {
@@ -6356,7 +6111,7 @@
                 });
                 this.copyInPageBtn.addEventListener("click", e => {
                     if (!this.lockWords) return;
-                    _GM_setClipboard(this.lockWords);
+                    _GM_setClipboard(this.lockWords.replace(/◎/g, "\n"));
                     _GM_notification('Copied successfully!');
                 });
                 this.setNav(navEnable);
@@ -6487,7 +6242,7 @@
                     }
                     await this.createType(siteConfig);
                     sitesNum += siteConfig.sites.length;
-                    if (sitesNum > 500) {
+                    if (sitesNum > 100) {
                         await sleep(1);
                         sitesNum = 0;
                     }
@@ -6504,7 +6259,7 @@
                     this.initPos();
                     this.appendBar();
                 }
-                if (this.fontPool.length > 0 || isInConfigPage()) {
+                if (this.fontPool.length > 0 || isInConfigPage) {
                     let linkEle = document.createElement("link");
                     linkEle.rel="stylesheet";
                     linkEle.href = searchData.prefConfig.fontAwesomeCss || "https://lib.baomitu.com/font-awesome/6.1.2/css/all.css";
@@ -6519,7 +6274,7 @@
                             hasFont = true;
                             cacheFontPool.unshift(font);
                         });
-                        if (hasFont) {
+                        if (hasFont && isInConfigPage) {
                             setTimeout(() => {cacheFontManager()}, 5000);
                         }
                     });
@@ -6532,7 +6287,7 @@
                 lastSign = false;
 
                 if (inPagePostParams) {
-                    await this.submitAction(inPagePostParams);
+                    this.submitAction(inPagePostParams);
                     setTimeout(() => {
                         storage.setListItem("inPagePostParams", location.hostname, "");
                     }, 10000);
@@ -6797,7 +6552,7 @@
                 for (let siteConfig of bookmarkTypes) {
                     await this.createType(siteConfig);
                     sitesNum += siteConfig.sites.length;
-                    if (sitesNum > 200) {
+                    if (sitesNum > 100) {
                         await sleep(1);
                         sitesNum = 0;
                     }
@@ -6904,11 +6659,14 @@
                 this.searchInPageTab.checked = true;
                 this.con.classList.add("in-find");
                 let beginHandler = () => {
-                    setTimeout(() => {
+                    setTimeout(async () => {
                         if (getBody(document).style.display === "none") getBody(document).style.display = "";
                         if (this.lockWords) {
                             this.initInPageWords = [];
                         } else {
+                            while (document.hidden) {
+                                await sleep(1000);
+                            }
                             let word = this.initInPageWords.shift();
                             while (word) {
                                 this.searchJumperInPageInput.value = word;
@@ -7428,7 +7186,9 @@
             }
 
             insertHistory(typeEle, init) {
-                if (!searchData.prefConfig.historyLength) return;
+                if (!searchData.prefConfig.historyLength) {
+                    return;
+                }
                 typeEle.style.width = "auto";
                 typeEle.style.height = "auto";
                 let self = this;
@@ -7971,7 +7731,62 @@
                             //self.bar.classList.add("minSizeMode");
                             self.bar.classList.remove("minSizeModeClose");
                         }
-                        if (sites.length > (searchData.prefConfig.expandTypeLength || 12) && !searchData.prefConfig.expandType) {
+                        let href = (targetElement && (targetElement.href || targetElement.src)) || location.href;
+                        let keyWords = getKeywords();
+                        let shownSitesNum = 0;
+                        siteEles.forEach((se, i) => {
+                            let data = sites[i];
+                            /*if (data.match && data.hideNotMatch) {
+                                if (new RegExp(data.match).test(href)) {
+                                    se.style.display = '';
+                                    if (ele.children.length > 1) ele.insertBefore(se, ele.children[1]);
+                                } else {
+                                    se.style.display = 'none';
+                                    if (self.searchJumperExpand.parentNode == ele) {
+                                        ele.insertBefore(se, self.searchJumperExpand);
+                                    } else ele.appendChild(se);
+                                }
+                            }*/
+                            let hasWordParam = wordParamReg.test(data.url);
+                            let checkKw = hasWordParam ? keyWords : href;
+                            if (checkKw && data.kwFilter) {
+                                if (new RegExp(data.kwFilter).test(checkKw)) {
+                                    se.style.display = '';
+                                    if (ele.children.length > 1) ele.insertBefore(se, ele.children[1]);
+                                } else {
+                                    se.style.display = 'none';
+                                    if (self.searchJumperExpand.parentNode == ele) {
+                                        ele.insertBefore(se, self.searchJumperExpand);
+                                    } else ele.appendChild(se);
+                                }
+                            }
+                            if (se.dataset.paste) {
+                                if (targetElement &&
+                                    ((/INPUT|TEXTAREA/i.test(targetElement.nodeName) &&
+                                      targetElement.getAttribute("aria-readonly") != "true"
+                                     ) ||
+                                     targetElement.contentEditable == 'true'
+                                    )
+                                   ) {
+                                    se.style.display = '';
+                                    if (ele.children.length > 1) ele.insertBefore(se, ele.children[1]);
+                                } else {
+                                    se.style.display = 'none';
+                                    if (self.searchJumperExpand.parentNode == ele) {
+                                        ele.insertBefore(se, self.searchJumperExpand);
+                                    } else ele.appendChild(se);
+                                }
+                            }
+                            let si = se.querySelector("img");
+                            if (se.style.display != "none") {
+                                shownSitesNum++;
+                                if (si && !si.src && si.dataset.src) {
+                                    si.src = si.dataset.src;
+                                    delete si.dataset.src;
+                                }
+                            }
+                        });
+                        if (shownSitesNum > (searchData.prefConfig.expandTypeLength || 12) && !searchData.prefConfig.expandType) {
                             ele.classList.add("not-expand");
                             ele.appendChild(self.searchJumperExpand);
                         }
@@ -8000,40 +7815,6 @@
                                 type.style.flexWrap = "";
                             }
                         });
-                        let href = (targetElement && (targetElement.href || targetElement.src)) || location.href;
-                        let keyWords = getKeywords();
-                        siteEles.forEach((se, i) => {
-                            let data = sites[i];
-                            /*if (data.match && data.hideNotMatch) {
-                                if (new RegExp(data.match).test(href)) {
-                                    se.style.display = '';
-                                    if (ele.children.length > 1) ele.insertBefore(se, ele.children[1]);
-                                } else {
-                                    se.style.display = 'none';
-                                    if (self.searchJumperExpand.parentNode == ele) {
-                                        ele.insertBefore(se, self.searchJumperExpand);
-                                    } else ele.appendChild(se);
-                                }
-                            }*/
-                            let hasWordParam = wordParamReg.test(data.url);
-                            let checkKw = hasWordParam ? keyWords : href;
-                            if (checkKw && data.kwFilter) {
-                                if (new RegExp(data.kwFilter).test(checkKw)) {
-                                    se.style.display = '';
-                                    if (ele.children.length > 1) ele.insertBefore(se, ele.children[1]);
-                                } else {
-                                    se.style.display = 'none';
-                                    if (self.searchJumperExpand.parentNode == ele) {
-                                        ele.insertBefore(se, self.searchJumperExpand);
-                                    } else ele.appendChild(se);
-                                }
-                            }
-                            let si = se.querySelector("img");
-                            if (se.style.display != "none" && si && !si.src && si.dataset.src) {
-                                si.src = si.dataset.src;
-                                delete si.dataset.src;
-                            }
-                        });
                     } else {
                         if (searchData.prefConfig.minSizeMode) {
                             //self.bar.classList.remove("minSizeMode");
@@ -8056,9 +7837,38 @@
                         }, 500);
                     }
                 };
-                typeBtn.onmousedown = typeAction;
-                typeBtn.oncontextmenu = function (event) {
-                    event.preventDefault();
+                let draged = false, initMousePos, initTilePos;
+                let mouseUpHandler = e => {
+                    document.removeEventListener('mouseup', mouseUpHandler);
+                    document.removeEventListener('mousemove', mouseMoveHandler);
+                    if (!draged) {
+                        typeAction(e);
+                    }
+                    draged = false;
+                }
+                let mouseMoveHandler = e => {
+                    if (!draged) {
+                        self.tips.style.opacity = 0;
+                        draged = true;
+                        initMousePos = {x: e.clientX, y: e.clientY};
+                        initTilePos = {x: parseInt(self.bar.style.left), y: parseInt(self.bar.style.top)};
+                    } else {
+                        self.bar.style.left = initTilePos.x + e.clientX - initMousePos.x + "px";
+                        self.bar.style.top = initTilePos.y + e.clientY - initMousePos.y + "px";
+                    }
+                }
+                typeBtn.onmousedown = function (e) {
+                    if (e && self.funcKeyCall && e.button === 0 && !(e.shiftKey || e.altKey || e.ctrlKey)) {
+                        draged = false;
+                        e.preventDefault && e.preventDefault();
+                        document.addEventListener('mouseup', mouseUpHandler);
+                        document.addEventListener('mousemove', mouseMoveHandler);
+                        return;
+                    }
+                    typeAction(e);
+                };
+                typeBtn.oncontextmenu = function (e) {
+                    e.preventDefault();
                 };
 
                 typeBtn.addEventListener('click', e => {
@@ -8071,11 +7881,17 @@
                 }, true);
 
                 let showTimer, siteList;
+                let viewWidth = window.screen.availWidth || window.innerWidth || document.documentElement.clientWidth;
+                let viewHeight = window.screen.availHeight || window.innerHeight || document.documentElement.clientHeight;
+                let availableSize = !isMobile || (viewWidth > 600 && viewHeight > 600);
                 typeBtn.addEventListener('mouseenter', e => {
+                    if (draged) {
+                        return;
+                    }
                     if (!self.funcKeyCall && searchData.prefConfig.showSiteLists && (searchData.prefConfig.alwaysShowSiteLists || !ele.classList.contains("search-jumper-open"))) {
                         ele.appendChild(siteList);
                         self.listPos(ele.children[0], siteList);
-                    } else {
+                    } else if (availableSize) {
                         self.tipsPos(typeBtn, ele.dataset.title);
                     }
                     if (searchData.prefConfig.overOpen) {
@@ -8187,7 +8003,7 @@
                             let si = se.querySelector("img");
                             let data = sites[i];
 
-                            if (localKeywords && data.kwFilter) {
+                            if (data && localKeywords && data.kwFilter) {
                                 if (new RegExp(data.kwFilter).test(localKeywords)) {
                                     se.style.display = '';
                                 } else {
@@ -8430,19 +8246,22 @@
                     this.submitAction(params);
                     return;
                 }
-                let form, input, clicked = false, self = this;
+                let form, input, clicked = false, self = this, inLoop = false, loopTimes = 0, loopArr = [];
                 let opened = false;
 
-                for (let param of params) {
+                let singleAction = async (param, eleIndex) => {
+                    let result = true;
                     if (param[0] === "sleep" || param[0] === "@sleep") {
                         await sleep(param[1]);
                         debug(`sleep ${param[1]}`);
                     } else if (param[0] === "@click") {
                         clicked = true;
-                        await emuClick(param[1]);
+                        let _r = await emuClick(param[1], eleIndex);
+                        if (!_r) result = false;
                     } else if (param[1] === 'click' && param[0].indexOf('@') === 0) {
                         clicked = true;
-                        await emuClick(param[0].substr(1));
+                        let _r = await emuClick(param[0].substr(1), eleIndex);
+                        if (!_r) result = false;
                     } else if (param[0] === '@call') {
                         let func = window[param[1]] || new AsyncFunction('"use strict";' + param[1]);
                         if (func) await func();
@@ -8472,13 +8291,40 @@
                                 inputStr = customInputStr;
                             } else {
                                 storage.setListItem("inPagePostParams", location.hostname, "");
-                                return;
+                                return true;
                             }
                         }
-                        await emuInput(param[0], inputStr);
+                        let _r = await emuInput(param[0], inputStr, eleIndex);
+                        if (!_r) result = false;
                         if (param[0] !== "@") {
                             input = getElement(param[0]);
                         }
+                    }
+                    return result;
+                };
+
+                for (let param of params) {
+                    if (param[0] === "@loopStart") {
+                        inLoop = true;
+                        loopArr = [];
+                        loopTimes = parseInt(param[1]) || 1;
+                    } else if (param[0] === "@loopEnd") {
+                        inLoop = false;
+                        while (loopTimes-- > 0) {
+                            let allReady = false, eleIndex = 0;
+                            while (!allReady) {
+                                allReady = true;
+                                for (let param of loopArr) {
+                                    let ready = await singleAction(param, eleIndex);
+                                    if (!ready) allReady = false;
+                                }
+                                eleIndex++;
+                            }
+                        }
+                    } else if (inLoop) {
+                        loopArr.push(param);
+                    } else {
+                        await singleAction(param);
                     }
                     if (inPagePostParams) {
                         inPagePostParams.shift();
@@ -8486,6 +8332,20 @@
                         if (param[0] === '@reload') {
                             location.reload(!!param[1]);
                             return;
+                        }
+                    }
+                }
+                if (inLoop) {
+                    inLoop = false;
+                    while (loopTimes-- > 0) {
+                        let allReady = false, eleIndex = 0;
+                        while (!allReady) {
+                            allReady = true;
+                            for (let param of loopArr) {
+                                let ready = await singleAction(param, eleIndex);
+                                if (!ready) allReady = false;
+                            }
+                            eleIndex++;
                         }
                     }
                 }
@@ -8516,6 +8376,9 @@
                 let tipsData;
                 let pointer = !isBookmark && /^\[/.test(data.url);
                 let description = data.description;
+                if (typeof data.openInNewTab !== 'undefined') {
+                    openInNewTab = data.openInNewTab;
+                }
                 if (pointer) {
                     ele.dataset.pointer = true;
                     let siteNames = JSON.parse(data.url);
@@ -8546,8 +8409,8 @@
                     showTips = true;
                     ele.dataset.showTips = true;
                 }
-                if (typeof data.openInNewTab !== 'undefined') {
-                    openInNewTab = data.openInNewTab;
+                if (/^paste:/.test(data.url)) {
+                    ele.dataset.paste = true;
                 }
                 let isPage = /^(https?|ftp):/.test(data.url);
                 if (isPage) ele.dataset.isPage = isPage;
@@ -8690,7 +8553,8 @@
                 let getUrl = async (_keyWords) => {
                     self.customInput = false;
                     inputString = "";
-                    let hasWordParam = wordParamReg.test(data.url);
+                    let dataUrl = data.url;
+                    let hasWordParam = wordParamReg.test(dataUrl);
                     let keywords = _keyWords || self.searchJumperInputKeyWords.value || getSelectStr();
                     if (!keywords && !draging && !self.bar.classList.contains("search-jumper-isTargetLink")) {
                         keywords = getKeywords();
@@ -8705,7 +8569,14 @@
                     }
                     let postMatch;
                     if (inPagePost) {
-                        postMatch = data.url.match(/#p{([\s\S]*[^\\])}/);
+                        if (dataUrl.indexOf('%input{') !== -1) {
+                            dataUrl = await new Promise(resolve => {
+                                self.showCustomInputWindow(dataUrl, _url => {
+                                    resolve(_url);
+                                });
+                            });
+                        }
+                        postMatch = dataUrl.match(/#p{([\s\S]*[^\\])}/);
                     }
                     let host = location.host;
                     let href = location.href;
@@ -8763,7 +8634,7 @@
                             return str.replace(keyToReg(key, "g"), (after ? after(value.replace(/\$/g, "$$$$")) : value.replace(/\$/g, "$$$$")));
                         }
                     };
-                    let needDecode = (/^c(opy)?:|[#:%]P{|^javascript:|^showTips:/i.test(data.url));
+                    let needDecode = (/^c(opy)?:|[#:%]P{|^javascript:|^showTips:/i.test(dataUrl));
                     let keywordsU = "", keywordsL = "", keywordsR = "", keywordsSC = "", keywordsTC = "";
                     let customReplaceKeywords = str => {
                         let _str = str;
@@ -8892,7 +8763,7 @@
                         return str;
                     }
                     if (!ele.dataset.url) {
-                        let tempUrl = data.url;
+                        let tempUrl = dataUrl;
                         if (inPagePost) {
                             tempUrl = tempUrl.replace(postMatch[0], "");
                         }
@@ -8914,7 +8785,7 @@
                             if (targetUrl) targetUrl = targetUrl.replace(/^blob:/, "");
                         }
                         targetName = targetElement.title || targetElement.alt || document.title;
-                        if (targetElement.nodeName.toUpperCase() == 'IMG' && /%i\b/.test(data.url)) {
+                        if (targetElement.nodeName.toUpperCase() == 'IMG' && /%i\b/.test(dataUrl)) {
                             if (targetElement.src) {
                                 if (/^data/.test(targetElement.src)) {
                                     imgBase64 = targetElement.src;
@@ -8973,7 +8844,7 @@
                                     inputString = keywords;
                                 }
                             }
-                            if (!imgBase64 && /%i\b/.test(data.url)) {
+                            if (!imgBase64 && /%i\b/.test(dataUrl)) {
                                 const permission = await navigator.permissions.query({
                                     name: "clipboard-read",
                                 });
@@ -8992,6 +8863,13 @@
                                             if (imgBase64) resultUrl = resultUrl.replace(/%i\b/g, imgBase64);
                                         }
                                     }
+                                }
+                                if (!imgBase64) {
+                                    self.customInput = true;
+                                    let src = window.prompt(i18n("targetUrl"), "https://www.google.com/favicon.ico");
+                                    if (src) {
+                                        imgBase64 = await imageSrc2Base64(src);
+                                    } else return false;
                                 }
                             }
                         }
@@ -9025,7 +8903,7 @@
                     }
                     if (targetUrl === '') {
                         let canBeUrl = getSelectStr() || self.searchJumperInputKeyWords.value;
-                        if (canBeUrl && !hasWordParam) {
+                        if (!hasWordParam && canBeUrl && /^(http|ftp)/i.test(canBeUrl)) {
                             targetUrl = canBeUrl;
                         } else {
                             let promptStr = false;
@@ -9069,7 +8947,12 @@
                         let postParams = [];
                         postMatch[1].replace(/([^\\])&/g, "$1SJ^PARAM").split("SJ^PARAM").forEach(pair => {//ios不支持零宽断言，哭唧唧
                             pair = pair.trim();
-                            if (pair.startsWith("click(") && pair.endsWith(')')) {
+                            if (/^loopStart\(\d+\)$/.test(pair)) {
+                                let loopStart = pair.match(/loopStart\((.*)\)/);
+                                postParams.push(['@loopStart', loopStart[1]]);
+                            } else if (pair == "loopEnd") {
+                                postParams.push(['@loopEnd', '']);
+                            } else if (pair.startsWith("click(") && pair.endsWith(')')) {
                                 let click = pair.slice(6, pair.length - 1);
                                 if (click) {
                                     postParams.push(['@click', click.replace(/\\([\=&])/g, "$1").trim()]);
@@ -9135,6 +9018,29 @@
                 let alt, ctrl, meta, shift;
                 let action = async e => {
                     delete ele.href;
+                    if (!e) e = {};
+                    alt = e.altKey;
+                    ctrl = e.ctrlKey;
+                    meta = e.metaKey;
+                    shift = e.shiftKey;
+                    if (!alt && !ctrl && !meta && !shift) {
+                        if (openInNewTab === 2) {//隱身窗口
+                            alt = false;
+                            ctrl = true;
+                            meta = false;
+                            shift = true;
+                        } else if (openInNewTab === 3) {//小窗口
+                            alt = true;
+                            ctrl = false;
+                            meta = false;
+                            shift = false;
+                        } else if (openInNewTab === 4) {//后台标签页
+                            alt = false;
+                            ctrl = true;
+                            meta = false;
+                            shift = false;
+                        }
+                    }
                     if (showTips) {
                         ele.removeAttribute("target");
                         if (tipsData) {
@@ -9155,15 +9061,10 @@
                         }
                         return;
                     }
-                    if (!e) e = {};
-                    alt = e.altKey;
-                    ctrl = e.ctrlKey;
-                    meta = e.metaKey;
-                    shift = e.shiftKey;
                     clicked = false;
                     targetUrlData = "";
                     targetUrlData = await getUrl();
-                    if (/^c(opy)?:/.test(data.url) || /^javascript:/.test(data.url) || /^\[/.test(data.url) || /[:%]P{/.test(data.url) || (data.charset && data.charset != 'utf-8') || /[:%]p{/.test(data.url)) {
+                    if (/^c(opy)?:|^paste:/.test(data.url) || /^javascript:/.test(data.url) || /^\[/.test(data.url) || /[:%]P{/.test(data.url) || (data.charset && data.charset != 'utf-8') || /[:%]p{/.test(data.url)) {
                         if (e.button == 1 || e.button == 2) {
                             clicked = true;
                         }
@@ -9202,7 +9103,7 @@
                     if (!self.batchOpening && !isBookmark) {
                         let historyLength = Math.max(searchData.prefConfig.historyLength, 20);
                         let isCurrent = ele.dataset.current;
-                        if (!data.hideNotMatch && !data.kwFilter && !ele.dataset.clone && urlMatch !== '0' && historyLength && !isCurrent) {
+                        if (!data.hideNotMatch && !data.kwFilter && !showTips && !ele.dataset.clone && !ele.dataset.paste && urlMatch !== '0' && historyLength && !isCurrent) {
                             storage.getItem("historySites", data => {
                                 historySites = (data || []);
                                 historySites = historySites.filter(site => {return site && site != name});
@@ -9363,6 +9264,48 @@
                             //_GM_notification('Copied successfully!');
                         }
                         return false;
+                    } else if (/^paste:/.test(data.url)) {
+                        function triggerPaste(element, value) {
+                            targetElement.focus();
+                            if (typeof element.value !== "undefined") {
+                                const startPos = element.selectionStart;
+                                const endPos = element.selectionEnd;
+                                let newValue = element.value.substring(0, startPos) + value + element.value.substring(endPos, element.value.length);
+                                startInput(element, newValue);
+                                element.selectionStart = startPos + value.length;
+                                element.selectionEnd = startPos + value.length;
+                            } else {
+                                const selection = window.getSelection();
+                                const range = selection.getRangeAt(0);
+                                range.deleteContents();
+                                range.insertNode(document.createTextNode(value));
+                                selection.removeAllRanges();
+                                selection.addRange(range);
+                            }
+                        }
+                        if (targetElement &&
+                            ((/INPUT|TEXTAREA/i.test(targetElement.nodeName) &&
+                              targetElement.getAttribute("aria-readonly") != "true"
+                             ) ||
+                             targetElement.contentEditable == 'true'
+                            )
+                           ) {
+                            if (!targetUrlData) {
+                                return false;
+                            }
+                            targetUrlData = targetUrlData.replace(/^paste:/, "");
+                            if (targetUrlData.indexOf('%input{') !== -1) {
+                                self.showCustomInputWindow(targetUrlData, _url => {
+                                    triggerPaste(targetElement, _url);
+                                });
+                            } else if (targetUrlData) {
+                                triggerPaste(targetElement, targetUrlData);
+                            } else if (typeof navigator.clipboard.readText !== "undefined") {
+                                navigator.clipboard.readText().then((clipboardValue) => {
+                                    triggerPaste(targetElement, clipboardValue);
+                                });
+                            }
+                        }
                     } else if (/^\[/.test(data.url)) {
                         if (e.preventDefault) e.preventDefault();
                         if (e.stopPropagation) e.stopPropagation();
@@ -9450,7 +9393,7 @@
                         if (e.preventDefault) e.preventDefault();
                         if (e.stopPropagation) e.stopPropagation();
                         if (ctrl) {
-                            _GM_openInTab(targetUrlData);
+                            _GM_openInTab(targetUrlData, {active: false});
                         } else {
                             _GM_openInTab(targetUrlData, {active: true});
                         }
@@ -9458,7 +9401,7 @@
                         if ((ctrl || meta) && shift) {
                             _GM_openInTab(targetUrlData, {incognito: true});
                         } else if (ctrl || meta) {
-                            _GM_openInTab(targetUrlData);
+                            _GM_openInTab(targetUrlData, {active: false});
                         } else if (alt) {
                             if (data.match) {
                                 let match = data.match.replace(/\\/g, "");
@@ -9471,9 +9414,11 @@
                             }
                             let viewWidth = window.screen.availWidth || window.innerWidth || document.documentElement.clientWidth;
                             let viewHeight = window.screen.availHeight || window.innerHeight || document.documentElement.clientHeight;
-                            let left = viewWidth - 450;
-                            let top = (viewHeight - 800) / 2;
-                            window.open(targetUrlData + "#searchJumperMin" + (/#p{/.test(data.url) ? 'Post' : ''), "_blank", `width=450, height=800, location=0, resizable=1, status=0, toolbar=0, menubar=0, scrollbars=0, left=${left}, top=${top}`);
+                            let showWidth = Math.min(viewWidth, 550);
+                            let showHeight = Math.min(viewHeight, 800);
+                            let left = viewWidth - showWidth;
+                            let top = (viewHeight - showHeight) / 2;
+                            window.open(targetUrlData + "#searchJumperMin" + (/#p{/.test(data.url) ? 'Post' : ''), "_blank", `width=${showWidth}, height=${showHeight}, location=0, resizable=1, status=0, toolbar=0, menubar=0, scrollbars=0, left=${left}, top=${top}`);
                         } else if (shift) {
                             _GM_openInTab(targetUrlData, {active: true});
                         }
@@ -9569,7 +9514,8 @@
                 try {
                     const calcReg = /([^\\]|^)([\+\-*/])([\d\.]+)$/;
                     const cacheReg = /\|cache\=(\d+)$/;
-                    const postReg = /%p{(.*)}/;
+                    const postReg = /%p{(.*?)}/;
+                    const thenReg = /.then{(.*?)}/;
                     data = data.replace(/^showTips:/, '');
                     if (/^https?:/.test(data)) {
                         let url = data.split("\n");
@@ -9696,9 +9642,9 @@
                                 let allValue = [];
                                 if (ext) {
                                     fetchData = new Promise((resolve) => {
-                                        chrome.runtime.sendMessage({action: "showTips", detail: {from: url}}, function(r) {
-                                            data = data.replace(/【SEARCHJUMPERURL】/g, r.finalUrl);
-                                            resolve(r.data);
+                                        chrome.runtime.sendMessage({action: "showTips", detail: {from: url + `\n{${template[1]}}`}}, function(r) {
+                                            data = data.replace(/【SEARCHJUMPERURL】/g, (r && r.finalUrl) || "");
+                                            resolve((r && r.data) || "");
                                         });
                                     });
                                 } else {
@@ -9720,16 +9666,42 @@
                                 tipsResult = [tipsResult, "\n" + allValue.join(",")];
                             } else {
                                 let hasData = false;
+                                let thenMatch = _url.match(thenReg), thenEleSelArr = [];
+                                while (thenMatch) {
+                                    let thenEleSel = thenMatch[1];
+                                    thenEleSelArr.push(thenEleSel);
+                                    _url = _url.replace(thenMatch[0], "");
+                                    thenMatch = _url.match(thenReg);
+                                }
                                 if (ext) {
                                     fetchData = new Promise((resolve) => {
-                                        chrome.runtime.sendMessage({action: "showTips", detail: {from: url}}, function(r) {
+                                        chrome.runtime.sendMessage({action: "showTips", detail: {from: url + `\n `}}, function(r) {
                                             if (data.indexOf('【SEARCHJUMPERURL】') != -1) {
-                                                data = data.replace(/【SEARCHJUMPERURL】/g, r.finalUrl);
+                                                data = data.replace(/【SEARCHJUMPERURL】/g, (r && r.finalUrl) || "");
                                                 hasData = true;
                                             }
-                                            resolve(r.data);
+                                            resolve((r && r.data) || "");
                                         });
                                     });
+                                    while (thenEleSelArr.length) {
+                                        let thenEleSel = thenEleSelArr.shift();
+                                        let thenUrl = await fetchData.then(r => {
+                                            let doc = document.implementation.createHTMLDocument('');
+                                            doc.documentElement.innerHTML = r;
+                                            let ele = getElement(thenEleSel, doc);
+                                            if (!ele) return null;
+                                            let basepath = doc.querySelector("base");
+                                            return canonicalUri(ele.getAttribute("href"), (basepath ? basepath.href : _url));
+                                        });
+
+                                        if (thenUrl) {
+                                            fetchData = new Promise((resolve) => {
+                                                chrome.runtime.sendMessage({action: "showTips", detail: {from: thenUrl + `\n `}}, function(r) {
+                                                    resolve((r && r.data) || "");
+                                                });
+                                            });
+                                        } else return "No result";;
+                                    }
                                 } else {
                                     fetchData = GM_fetch(_url, fetchOption).then(r => {
                                         if (data.indexOf('【SEARCHJUMPERURL】') != -1) {
@@ -9738,6 +9710,23 @@
                                         }
                                         return r.text();
                                     });
+                                    while (thenEleSelArr.length) {
+                                        let thenEleSel = thenEleSelArr.shift();
+                                        let thenUrl = await fetchData.then(r => {
+                                            let doc = document.implementation.createHTMLDocument('');
+                                            doc.documentElement.innerHTML = r;
+                                            let ele = getElement(thenEleSel, doc);
+                                            if (!ele) return null;
+                                            let basepath = doc.querySelector("base");
+                                            return canonicalUri(ele.getAttribute("href"), (basepath ? basepath.href : _url));
+                                        });
+
+                                        if (thenUrl) {
+                                            fetchData = GM_fetch(thenUrl).then(r => {
+                                                return r.text();
+                                            });
+                                        } else return "No result";
+                                    }
                                 }
                                 tipsResult = await fetchData.then(r => {
                                     let doc = document.implementation.createHTMLDocument('');
@@ -10240,6 +10229,7 @@
                 this.clickedIndex = 0;
                 this.signList = [];//所有标记
                 this.clickedEles = {};//点击的元素
+                this.exact = true;
             }
 
             /*static getInstance() {
@@ -10249,7 +10239,8 @@
                 return Picker.picker;
             }*/
 
-            getSelector(callback) {
+            getSelector(callback, exact = true) {
+                this.exact = exact;
                 this.close();
                 this.toggle();
                 this.callback = callback;
@@ -10317,7 +10308,7 @@
                     if (!target) return;
                     if (self.callback) {
                         if (target) {
-                            let sel = self.geneSelector(target, true);
+                            let sel = self.geneSelector(target, self.exact);
                             self.callback(sel);
                             self.close();
                         }
@@ -10643,8 +10634,16 @@
             adjustSignDiv(div, target) {
                 this.setImportant(div, "width", target.offsetWidth + "px");
                 this.setImportant(div, "height", target.offsetHeight + "px");
-                this.setImportant(div, "left", target.offsetLeft + "px");
-                this.setImportant(div, "top", target.offsetTop + "px");
+                let left = target.offsetLeft;
+                let top = target.offsetTop;
+                if (target.offsetParent && div.offsetParent && target.offsetParent !== div.offsetParent) {
+                    let rect1 = div.offsetParent.getBoundingClientRect();
+                    let rect2 = target.offsetParent.getBoundingClientRect();
+                    left += rect2.left - rect1.left;
+                    top += rect2.top - rect1.top;
+                }
+                this.setImportant(div, "left", left + "px");
+                this.setImportant(div, "top", top + "px");
             }
 
             geneSelector(ele, id) {
@@ -10895,6 +10894,7 @@
                     if (sel === "@") {
                         result = targetElement;
                     } else result = getElement(sel);
+                    if (result === false) return null;
                     if (result) {
                         clearInterval(checkInv);
                         resolve(result);
@@ -10916,11 +10916,13 @@
             });
         }
 
-        async function emuInput(sel, v) {
-            let input = await waitForElement(sel);
+        function startInput(input, v) {
+            if (!input) return true;
+            let result = false;
             targetElement = input;
             let event = new Event('focus', { bubbles: true });
             input.dispatchEvent(event);
+            input.click && input.click();
             let lastValue = input.value;
             if (input.type == 'file') {
                 let file = v;
@@ -10936,9 +10938,12 @@
                 dataTransfer.items.add(file);
                 input.files = dataTransfer.files;
                 v = "c:/fakepath/fakefile";
-            } else if (input.nodeName.toUpperCase() == "INPUT") {
+            } else if (/INPUT/i.test(input.nodeName)) {
                 var nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
                 nativeInputValueSetter.call(input, v);
+            } else if (/SELECT/i.test(input.nodeName)) {
+                var nativeSelectValueSetter = Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype, "value").set;
+                nativeSelectValueSetter.call(input, v);
             } else if (input.nodeName.toUpperCase() == "TEXTAREA") {
                 var nativeTextareaValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value").set;
                 nativeTextareaValueSetter.call(input, v);
@@ -10953,11 +10958,59 @@
             input.dispatchEvent(event);
             event = new Event('change', { bubbles: true });
             input.dispatchEvent(event);
-            debug(input, `input ${sel}`);
+            debug(input, `input`);
+            return result;
         }
 
-        async function emuClick(sel) {
-            let btn = await waitForElement(sel);
+        async function emuInput(sel, v, eleIndex = -1) {
+            let input, result = false;
+            if (eleIndex >= 0) {
+                if (eleIndex === 0) await waitForElement(sel);
+                let eles = getAllElements(sel);
+                if (eles.length === 0) {
+                    return true;
+                }
+                if (eles.length === 1) {
+                    input = eles[0];
+                    result = true;
+                } else if (eles.length <= eleIndex) {
+                    return true;
+                } else {
+                    input = eles[eleIndex];
+                    if (eles.length === eleIndex + 1) {
+                        result = true;
+                    }
+                }
+            } else {
+                input = await waitForElement(sel);
+                if (!input) return true;
+            }
+            return startInput(input, v);
+        }
+
+        async function emuClick(sel, eleIndex = -1) {
+            let btn, result = false;
+            if (eleIndex >= 0) {
+                if (eleIndex === 0) await waitForElement(sel);
+                let btns = getAllElements(sel);
+                if (btns.length === 0) {
+                    return true;
+                }
+                if (btns.length === 1) {
+                    btn = btns[0];
+                    result = true;
+                } else if (btns.length <= eleIndex) {
+                    return true;
+                } else {
+                    btn = btns[eleIndex];
+                    if (btns.length === eleIndex + 1) {
+                        result = true;
+                    }
+                }
+            } else {
+                btn = await waitForElement(sel);
+                if (!btn) return true;
+            }
             targetElement = btn;
             if(!PointerEvent) return btn.click();
             let eventParam = {
@@ -11046,6 +11099,7 @@
             dispatchTouchEvent(btn, "touchend");
             btn.click();
             debug(btn, `click ${sel}`);
+            return result;
         }
 
         function submitByForm(charset, url, target) {
@@ -11222,7 +11276,10 @@
         }
 
         async function cacheFontManager(noti) {
-            if (searchData.prefConfig.cacheSwitch) {
+            if (searchData.prefConfig.cacheSwitch && !isAllPage) {
+                searchBar.con.classList.add("in-input");
+                searchBar.con.style.visibility = "hidden";
+                searchBar.appendBar();
                 let needCache = cacheFontPool.length > 0;
                 while (cacheFontPool.length > 0) {
                     await cacheAction(cacheFontPool.shift());
@@ -11700,15 +11757,17 @@
                             searchBar.showAllSites();
                         }
                     }
-                    if (searchData.prefConfig.switchSitesPreKey) {
-                        if (checkShortcutEnable(e, searchData.prefConfig.switchSitesAlt, searchData.prefConfig.switchSitesCtrl, searchData.prefConfig.switchSitesShift, searchData.prefConfig.switchSitesMeta, searchData.prefConfig.switchSitesPreKey)) {
-                            searchBar.switchSite();
-                            return;
+                    if (currentSite && searchBar.bar.style.display !== "none") {
+                        if (searchData.prefConfig.switchSitesPreKey) {
+                            if (checkShortcutEnable(e, searchData.prefConfig.switchSitesAlt, searchData.prefConfig.switchSitesCtrl, searchData.prefConfig.switchSitesShift, searchData.prefConfig.switchSitesMeta, searchData.prefConfig.switchSitesPreKey)) {
+                                searchBar.switchSite();
+                                return;
+                            }
                         }
-                    }
-                    if (searchData.prefConfig.switchSitesNextKey) {
-                        if (checkShortcutEnable(e, searchData.prefConfig.switchSitesAlt, searchData.prefConfig.switchSitesCtrl, searchData.prefConfig.switchSitesShift, searchData.prefConfig.switchSitesMeta, searchData.prefConfig.switchSitesNextKey)) {
-                            searchBar.switchSite(true);
+                        if (searchData.prefConfig.switchSitesNextKey) {
+                            if (checkShortcutEnable(e, searchData.prefConfig.switchSitesAlt, searchData.prefConfig.switchSitesCtrl, searchData.prefConfig.switchSitesShift, searchData.prefConfig.switchSitesMeta, searchData.prefConfig.switchSitesNextKey)) {
+                                searchBar.switchSite(true);
+                            }
                         }
                     }
                 }, true);
@@ -11889,7 +11948,7 @@
                     shown = false;
                 });
             }
-            if (searchData.prefConfig.dragToSearch && !isInConfigPage()) {
+            if (searchData.prefConfig.dragToSearch && !isInConfigPage) {
                 getBody(document).addEventListener('dragstart', e => {
                     if (!e.isTrusted ||
                         (searchData.prefConfig.dragAlt && !e.altKey) ||
@@ -12044,15 +12103,21 @@
             bodyObserver.observe(getBody(document), bodyObserverOptions);
         }
 
-        function canonicalUri(src) {
+        function canonicalUri(src, href) {
             if (!src) {
                 return "";
             }
-            if (src.charAt(0) == "#") return location.href + src;
-            if (src.charAt(0) == "?") return location.href.replace(/^([^\?#]+).*/, "$1" + src);
-            let origin = location.protocol + '//' + location.host;
-            let base = document.querySelector("base");
-            let basePath = base ? base.href : location.href;
+            let origin, basePath;
+            if (!href) {
+                if (src.charAt(0) == "#") return location.href + src;
+                if (src.charAt(0) == "?") return location.href.replace(/^([^\?#]+).*/, "$1" + src);
+                origin = location.protocol + '//' + location.host;
+                let base = document.querySelector("base");
+                basePath = base ? base.href : location.href;
+            } else {
+                origin = href.replace(/(^https?:\/\/.+)\/[^\/]*$/, "$1");
+                basePath = href;
+            }
             let url = basePath || origin;
             url = url.replace(/(\?|#).*/, "");
             if (/https?:\/\/[^\/]+$/.test(url)) url = url + '/';
@@ -12073,7 +12138,7 @@
 
         function quickAddByInput(input) {
             if (shareEngines) return;
-            let parentForm, url = location.href, showCrawl = false;
+            let parentForm, url = location.href;
             if (input && input.name) {
                 parentForm = input.parentNode;
                 while (parentForm) {
@@ -12093,7 +12158,6 @@
             }
             let fail = () => {
                 if (window.confirm(i18n("noValidItemAsk"))) {
-                    showCrawl = true;
                     return false;
                 }
                 return true;
@@ -12150,7 +12214,7 @@
                 if (icons.indexOf && icons.indexOf(link.href) !== -1) return;
                 icons.push(link.href);
             });
-            showSiteAdd(document.title.replace(input ? input.value : "", "").replace(/^\s*[-_]\s*/, ""), "", url, icons, document.characterSet, "", true);
+            showSiteAdd(document.title.replace(input ? input.value : "", "").replace(/^\s*[-_]\s*/, ""), "", url, icons, document.characterSet);
         }
 
         const jumpHtml = "https://hoothin.github.io/SearchJumper/jump.html";
@@ -12173,20 +12237,64 @@
         }
 
         var shareEngines;
-        function isInConfigPage() {
-            if (location.href.indexOf(configPage) === 0 || (document.title === "SearchJumper" && document.querySelector('[name="author"][content="Hoothin"]'))) {
+        async function checkConfigPage() {
+            if (location.href.indexOf(configPage) === 0 || ((document.title === "SearchJumper" || document.querySelector('[name="from"][content="SearchJumper"]')) && document.querySelector('[name="author"][content="Hoothin"]'))) {
                 shareEngines = document.querySelector('[name="engines"]');
+                let spotlight = document.getElementById("spotlight");
                 if (shareEngines) {
                     try {
                         shareEngines = shareEngines.getAttribute("content");
-                        shareEngines = JSON.parse(decodeURI(shareEngines));
-                        searchData.sitesConfig = shareEngines;
+                        if (shareEngines.indexOf("http") === 0) {
+                            if (spotlight) {
+                                const loadingCollection = i18n("loadingCollection");
+                                spotlight.innerText = loadingCollection;
+                                spotlight.setAttribute("spotlight", loadingCollection);
+                            }
+                            let config = await new Promise((resolve) => {
+                                if (ext) {
+                                    chrome.runtime.sendMessage({action: "getShareEngines", detail: {engineUrl: shareEngines}}, function(r) {
+                                        resolve(r);
+                                    });
+                                } else {
+                                    _GM_xmlhttpRequest({
+                                        method: 'GET',
+                                        url: shareEngines,
+                                        onload: function(result) {
+                                            var jsonData = null;
+                                            try {
+                                                jsonData = JSON.parse(result.responseText);
+                                                resolve(jsonData);
+                                            } catch (e) {
+                                                console.log(e);
+                                                resolve(false);
+                                            }
+                                        },
+                                        onerror: function(e) {
+                                            console.log(e);
+                                            resolve(false);
+                                        },
+                                        ontimeout: function(e) {
+                                            console.log(e);
+                                            resolve(false);
+                                        }
+                                    });
+                                }
+                            });
+                            if (config) {
+                                searchData.sitesConfig = config;
+                                shareEngines = true;
+                            } else {
+                                shareEngines = false;
+                            }
+                        } else {
+                            searchData.sitesConfig = JSON.parse(decodeURI(shareEngines));
+                            shareEngines = true;
+                        }
                     } catch (e) {
-                        shareEngines = null;
+                        shareEngines = false;
                     }
                 }
                 isAllPage = !!shareEngines || /all(\.html)?$/.test(location.pathname);
-                let spotlight = document.getElementById("spotlight");
                 if (spotlight) {
                     spotlight.style.display = "none";
                 } else {
@@ -12202,8 +12310,9 @@
             return false;
         }
 
-        function initConfig() {
-            if (isInConfigPage() && !isAllPage) {
+        async function initConfig() {
+            isInConfigPage = await checkConfigPage();
+            if (isInConfigPage && !isAllPage) {
                 let sendMessageTimer, received = false;
                 let loadConfig = () => {
                     sendMessageTimer = setTimeout(() => {
@@ -12237,7 +12346,27 @@
                     _GM_notification('Cache imported successfully!');
                 });
 
+                document.addEventListener('showSiteAdd', e => {
+                    let siteData = e.detail ? e.detail.site : e.site;
+                    if (!siteData) return;
+                    if (siteData.url) {
+                        showSiteAdd(siteData.name, siteData.description, siteData.url, (siteData.icon ? [siteData.icon] : []), siteData.charset, siteData.kwFilter, siteData.match, siteData.hideNotMatch);
+                    } else {
+                        importFilter.open(siteData);
+                    }
+                });
+
                 loadConfig();
+                let lastModified = searchData.lastModified;
+                document.addEventListener('visibilitychange', async e => {
+                    if (!document.hidden) {
+                        searchData = await storage.getItem("searchData");
+                        if (searchData.lastModified && lastModified != searchData.lastModified) {
+                            lastModified = searchData.lastModified;
+                            loadConfig();
+                        }
+                    }
+                });
 
                 let sendVerifyResult = (url, name, status, finalUrl) => {
                     window.postMessage({
@@ -12361,7 +12490,6 @@
                         display: block;
                         font-size: 20px;
                         left: 0px;
-                        opacity: 0.9;
                         top: 0px;
                         width: 100%;
                         height: 100%;
@@ -12369,12 +12497,17 @@
                     #import-btns-con.hide {
                         pointer-events: none;
                     }
+                    #import-btns-con>button {
+                        opacity: 0.5;
+                    }
+                    #import-btns-con>button:hover {
+                        opacity: 0.9;
+                    }
                     #import-btn {
                         position: absolute;
                         display: block;
                         font-size: 20px;
                         right: 45px;
-                        opacity: 0.8;
                         top: 45px;
                         pointer-events: all;
                     }
@@ -12382,8 +12515,7 @@
                         position: absolute;
                         display: none;
                         font-size: 20px;
-                        right: 115px;
-                        opacity: 0.8;
+                        left: 45px;
                         top: 45px;
                         pointer-events: all;
                     }
@@ -12407,7 +12539,6 @@
                     if (targetPre) targetPre.style.filter = "";
                     btnsCon.classList.add("hide");
                 });
-                const importFilter = new ImportFilter();
                 importBtn.innerText = i18n("import");
                 importBtn.addEventListener("click", e => {
                     if (shareEngines) return;
@@ -12436,7 +12567,7 @@
                             }
                             break;
                         case 1:
-                            showSiteAdd(configData.name, "", configData.url, (configData.icon ? [configData.icon] : []), configData.charset, configData.kwFilter);
+                            showSiteAdd(configData.name, "", configData.url, (configData.icon ? [configData.icon] : []), configData.charset, configData.kwFilter, configData.match, configData.hideNotMatch);
                             break;
                         case 2:
                             if (!searchData.prefConfig.inPageRule) searchData.prefConfig.inPageRule = {};
@@ -12529,7 +12660,7 @@
         class ImportFilter {
             //static importFilter;
             constructor() {
-                this.init();
+                this.inited = false;
             }
 
             /*static getInstance() {
@@ -12540,6 +12671,8 @@
             }*/
 
             init() {
+                if (this.inited) return;
+                this.inited = true;
                 let self = this;
                 this.openList = [];
                 this.filterCss = `
@@ -12889,6 +13022,7 @@
             }
 
             open(configData) {
+                this.init();
                 let self = this;
                 this.siteDict = {};
                 this.typeDict = {};
@@ -12902,6 +13036,7 @@
                 //_GM_notification('Over!');
             }
         }
+        const importFilter = new ImportFilter();
 
         var dragRoundFrame, dragCon, dragSiteCurSpans, dragSiteHistorySpans, dragEndHandler, dragenterHandler, openAllTimer, dragScaleWidth, dragScaleHeight, zoomDrag;
         function showDragSearch(left, top) {
@@ -13230,16 +13365,24 @@
                 }
                 return result;
             };
-            dragSiteCurSpans.forEach((span, i) => {
-                span.innerHTML = createHTML();
-                span.parentNode.parentNode.style.filter = 'contrast(0.5)';
-                let targetSite = getTargetSiteBtn();
-                if (!targetSite) return;
-                span.parentNode.parentNode.style.filter = '';
+            const filldragSpan = (span, targetSite) => {
                 span.parentNode.dataset.name = targetSite.dataset.name;
                 let word = document.createElement("p");
                 word.innerText = targetSite.dataset.name.substr(0, 10).trim();
-                if (!/^\w+$/.test(word.innerText)) word.innerText = word.innerText.substr(0, 6);
+                if (!/^\w+$/.test(word.innerText)) {
+                    let text = "", len = 0;
+                    for (let char of word.innerText) {
+                        text += char;
+                        if (/^\w+$/.test(char)) {
+                            len++;
+                        } else len += 2;
+                        if (len > 10) {
+                            text += "...";
+                            break;
+                        }
+                    }
+                    word.innerText = text;
+                }
                 let img = document.createElement("img");
                 img.style.display = "none";
                 span.appendChild(img);
@@ -13252,6 +13395,16 @@
                     let src = targetIcon.src || targetIcon.dataset.src;
                     if (src) img.src = src;
                 }
+            };
+            dragSiteCurSpans.forEach((span, i) => {
+                span.innerHTML = createHTML();
+                let targetSite = getTargetSiteBtn();
+                if (!targetSite) {
+                    span.parentNode.parentNode.style.filter = 'contrast(0.5)';
+                    return;
+                }
+                span.parentNode.parentNode.style.filter = '';
+                filldragSpan(span, targetSite);
             });
             let findIndex = 0;
             let getHistorySiteBtn = () => {
@@ -13284,22 +13437,7 @@
                     delete siteImg.dataset.src;
                 }
                 span.parentNode.parentNode.style.opacity = 1;
-                span.parentNode.dataset.name = targetSite.dataset.name;
-                let word = document.createElement("p");
-                word.innerText = targetSite.dataset.name.substr(0, 10).trim();
-                if (!/^\w+$/.test(word.innerText)) word.innerText = word.innerText.substr(0, 6);
-                let img = document.createElement("img");
-                img.style.display = "none";
-                span.appendChild(img);
-                span.appendChild(word);
-                img.onload = e => {
-                    img.style.display = "";
-                };
-                let targetIcon = targetSite.querySelector("img");
-                if (targetIcon) {
-                    let src = targetIcon.src || targetIcon.dataset.src;
-                    if (src) img.src = src;
-                }
+                filldragSpan(span, targetSite);
             });
 
             dragCon.style.left = left - dragScaleWidth + "px";
@@ -13324,7 +13462,7 @@
         }
 
         var addFrame, nameInput, descInput, urlInput, iconInput, iconShow, iconsCon, typeSelect, testBtn, cancelBtn, addBtn, siteKeywords, siteMatch, openSelect, crawlBtn;
-        function showSiteAdd(name, description, url, icons, charset, kwFilter, showCrawl) {
+        function showSiteAdd(name, description, url, icons, charset, kwFilter, match, hideNotMatch) {
             if (!addFrame) {
                 let addFrameCssText = `
                     .searchJumperFrame-body,
@@ -13345,7 +13483,7 @@
                         filter: alpha(opacity=95);
                         box-shadow: 5px 5px 20px 0px #000;
                         color: #6e7070;
-                        transition:all 0.25s ease;
+                        transition: all 0.25s ease;
                         border: 0;
                         font-size: initial;
                     }
@@ -13358,6 +13496,11 @@
                         font-weight: bold;
                         font-size: 18px!important;
                         border-radius: 10px 10px 0 0!important;
+                    }
+                    .draging .searchJumperFrame-body,
+                    .draging .searchJumperFrame-crawlBody {
+                        transition: none;
+                        pointer-events: none;
                     }
                     .searchJumperFrame-title>img {
                         margin: 5px;
@@ -13517,8 +13660,11 @@
                     .crawling>.searchJumperFrame-crawlBody {
                         display: block;
                     }
-                    .searchJumperFrame-buttons>button#submitCrawl {
-                        width: 99%;
+                    .searchJumperFrame-buttons>button#submitCrawl,
+                    .searchJumperFrame-buttons>button#record,
+                    .searchJumperFrame-buttons>button#loop {
+                        width: 100%;
+                        margin: 0 3px;
                     }
                     .searchJumperFrame-crawlBody>.actionCon {
                         height: 200px;
@@ -13584,12 +13730,19 @@
                         border: 2px solid #000000;
                       }
                     }
+                    @media screen and (max-height: 600px) {
+                      .searchJumperFrame-body,
+                      .searchJumperFrame-crawlBody {
+                        top: 10px;
+                        margin-top: 0px;
+                      }
+                    }
                 `;
                 let addFrameCssEle = _GM_addStyle(addFrameCssText);
                 addFrame = document.createElement("div");
                 addFrame.innerHTML = createHTML(`
                 <div class="searchJumperFrame-body">
-                    <a href="${configPage}" class="searchJumperFrame-title" target="_blank">
+                    <a href="${configPage}" class="searchJumperFrame-title" target="_blank" draggable="false">
                         <img width="32px" height="32px" src="${logoBase64}" />${i18n("addSearchEngine")}
                     </a>
                     <div class="searchJumperFrame-maxBtn">
@@ -13637,6 +13790,12 @@
                     <svg class="searchJumperFrame-closeBtn" fill="white" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"><title>Close crawl</title>${closePath}</svg>
                     <div class="actionCon"></div>
                     <div class="searchJumperFrame-buttons">
+                        <button id="record" type="button">${i18n("recordAction")}</button>
+                    </div>
+                    <div class="searchJumperFrame-buttons">
+                        <button id="loop" type="button">${i18n("loopAction")}</button>
+                    </div>
+                    <div class="searchJumperFrame-buttons">
                         <button id="input" type="button">${i18n("inputAction")}</button>
                         <button id="click" type="button">${i18n("clickAction")}</button>
                         <button id="sleep" type="button">${i18n("sleepAction")}</button>
@@ -13647,6 +13806,7 @@
                 </div>
                 `);
                 if (!disabled) addFrame.appendChild(addFrameCssEle);
+                let addBody = addFrame.children[0];
                 nameInput = addFrame.querySelector("[name='siteName']");
                 descInput = addFrame.querySelector("[name='description']");
                 urlInput = addFrame.querySelector("[name='url']");
@@ -13660,6 +13820,35 @@
                 siteKeywords = addFrame.querySelector("[name='siteKeywords']");
                 siteMatch = addFrame.querySelector("[name='siteMatch']");
                 openSelect = addFrame.querySelector("select[name='openSelect']");
+                let title = addFrame.querySelector(".searchJumperFrame-title");
+                let initMousePos, initFramePos, moving = false;
+                let dragTitleMove = e => {
+                    if (!moving) {
+                        addFrame.classList.add("draging");
+                        moving = true;
+                    }
+                    let x = e.clientX - initMousePos.x + initFramePos.x;
+                    let y = e.clientY - initMousePos.y + initFramePos.y;
+                    addBody.style.marginLeft = x + "px";
+                    addBody.style.marginTop = y + "px";
+                };
+                let dragTitleUp = e => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    addFrame.classList.remove("draging");
+                    document.removeEventListener("mousemove", dragTitleMove);
+                    document.removeEventListener("mouseup", dragTitleUp);
+                };
+                title.addEventListener("mousedown", e => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    moving = false;
+                    initMousePos = {x: e.clientX, y: e.clientY};
+                    let addBodyStyle = getComputedStyle(addBody);
+                    initFramePos = {x: parseInt(addBodyStyle.marginLeft || 0), y: parseInt(addBodyStyle.marginTop || 0)};
+                    document.addEventListener("mousemove", dragTitleMove);
+                    document.addEventListener("mouseup", dragTitleUp);
+                });
                 let maxBtn = addFrame.querySelector("#maxBtn");
                 maxBtn.addEventListener("click", e => {
                     addFrame.classList.add("maxContent");
@@ -13685,7 +13874,12 @@
                         let postParams = [];
                         actionParams[1].replace(/([^\\])&/g, "$1SJ^PARAM").split("SJ^PARAM").forEach(pair => {//ios不支持零宽断言，哭唧唧
                             pair = pair.trim();
-                            if (pair.startsWith("click(") && pair.endsWith(')')) {
+                            if (/^loopStart\(\d+\)$/.test(pair)) {
+                                let loopStart = pair.match(/loopStart\((.*)\)/);
+                                postParams.push(['@loopStart', loopStart[1]]);
+                            } else if (pair == "loopEnd") {
+                                postParams.push(['@loopEnd', '']);
+                            } else if (pair.startsWith("click(") && pair.endsWith(')')) {
                                 let click = pair.slice(6, pair.length - 1);
                                 if (click) {
                                     postParams.push(['@click', click.replace(/\\([\=&])/g, "$1").trim()]);
@@ -13742,7 +13936,10 @@
                             for (let j = 0; j < typeConfig.sites.length; j++) {
                                 let curSite = typeConfig.sites[j];
                                 if (curSite.url == urlInput.value) {
-                                    if (i == parseInt(typeSelect.value)) return;
+                                    if (i == parseInt(typeSelect.value)) {
+                                        alert('Already added!');
+                                        return;
+                                    }
                                     if (window.confirm(i18n("siteExist"))) {
                                         siteObj = {
                                             name: curSite.name + " - " + typeConfig.type,
@@ -13778,6 +13975,12 @@
                             if (kwFilter) {
                                 siteObj.kwFilter = kwFilter;
                             }
+                            if (match) {
+                                siteObj.match = match;
+                            }
+                            if (hideNotMatch) {
+                                siteObj.hideNotMatch = hideNotMatch;
+                            }
                         }
                         searchData.sitesConfig[typeSelect.value].sites.push(siteObj);
                         searchData.lastModified = new Date().getTime();
@@ -13787,6 +13990,11 @@
                         if (addFrame.parentNode) {
                             addFrame.parentNode.removeChild(addFrame);
                         }
+                        window.postMessage({
+                            searchData: searchData,
+                            version: _GM_info.script.version || 0,
+                            command: 'loadConfig'
+                        }, '*');
                     });
                 });
 
@@ -13797,16 +14005,24 @@
                 let clickAction = addFrame.querySelector("#click");
                 let sleepAction = addFrame.querySelector("#sleep");
                 let submitCrawl = addFrame.querySelector("#submitCrawl");
+                let recordBtn = addFrame.querySelector("#record");
+                let loopBtn = addFrame.querySelector("#loop");
                 let dragDiv;
-                let addAction = (type, sel, val) => {
+                let addAction = (type, sel = '', val = '') => {
                     let div = document.createElement("div");
-                    let words = "";
+                    let words = type;
                     switch(type) {
                         case "input":
                             words = i18n('inputOutput', [sel, val]);
                             break;
                         case "click":
                             words = i18n('clickOutput', sel);
+                            break;
+                        case "loopStart":
+                            words = i18n('loopStart', val);
+                            break;
+                        case "loopEnd":
+                            words = i18n('loopEnd');
                             break;
                         case "sleep":
                             words = i18n('sleepOutput', val);
@@ -13830,25 +14046,47 @@
                             actionCon.insertBefore(dragDiv, div);
                         }
                         div.onclick = e => {
-                            if (e.target.nodeName.toUpperCase() == 'SPAN') {
-                                if (e.target.className == 'element') {
+                            let target = e.target;
+                            if (target.nodeName.toUpperCase() == 'SPAN') {
+                                if (target.className == 'element') {
                                     picker.getSelector(selector => {
-                                        e.target.innerText = selector;
-                                        e.target.title = selector;
+                                        target.innerText = selector;
+                                        target.title = selector;
                                         addFrame.style.display = '';
                                         div.dataset.sel = selector;
                                     });
                                     addFrame.style.display = 'none';
                                 } else {
-                                    let newValue = prompt(i18n('inputNewValue'), e.target.innerText);
+                                    let newValue = prompt(i18n('inputNewValue'), target.innerText);
                                     if (newValue) {
-                                        e.target.innerText = newValue;
-                                        e.target.title = newValue;
+                                        target.innerText = newValue;
+                                        target.title = newValue;
                                         div.dataset.val = newValue;
                                     }
                                 }
                             } else if (confirm(i18n('deleteConfirm'))) {
                                 actionCon.removeChild(div);
+                            }
+                        }
+                        div.oncontextmenu = e => {
+                            let target = e.target;
+                            if (target.nodeName.toUpperCase() == 'SPAN') {
+                                e.preventDefault();
+                                if (target.className == 'element') {
+                                    let newValue = prompt('Selector', target.innerText);
+                                    if (newValue) {
+                                        target.innerText = newValue;
+                                        target.title = newValue;
+                                        div.dataset.sel = newValue;
+                                    }
+                                } else {
+                                    let newValue = prompt(i18n('inputNewValue'), target.innerText);
+                                    if (newValue) {
+                                        target.innerText = newValue;
+                                        target.title = newValue;
+                                        div.dataset.val = newValue;
+                                    }
+                                }
                             }
                         }
                         actionCon.appendChild(div);
@@ -13860,7 +14098,12 @@
                     if (!actionParams) return;
                     actionParams[1].replace(/([^\\])&/g, "$1SJ^PARAM").split("SJ^PARAM").forEach(pair => {
                         pair = pair.trim();
-                        if (pair.startsWith("click(") && pair.endsWith(')')) {
+                        if (/^loopStart\(\d+\)$/.test(pair)) {
+                            let loopStart = pair.match(/loopStart\((.*)\)/);
+                            addAction('loopStart', '', loopStart[1]);
+                        } else if (pair == "loopEnd") {
+                            addAction('loopEnd');
+                        } else if (pair.startsWith("click(") && pair.endsWith(')')) {
                             let click = pair.slice(6, pair.length - 1);
                             if (click) {
                                 addAction('click', click.replace(/\\([\=&])/g, "$1").trim());
@@ -13869,6 +14112,16 @@
                             let func = pair.slice(5, pair.length - 1);
                             if (func) {
                                 addAction('call', '', func.replace(/\\([\=&])/g, "$1").trim());
+                            }
+                        } else if (pair.startsWith("wait(") && pair.endsWith(')')) {
+                            let func = pair.slice(5, pair.length - 1);
+                            if (func) {
+                                addAction('wait', '', func.replace(/\\([\=&])/g, "$1").trim());
+                            }
+                        } else if (pair.startsWith("open(") && pair.endsWith(')')) {
+                            let func = pair.slice(5, pair.length - 1);
+                            if (func) {
+                                addAction('open', '', func.replace(/\\([\=&])/g, "$1").trim());
                             }
                         } else if (/^sleep\(\d+\)$/.test(pair)) {
                             let sleep = pair.match(/sleep\((.*)\)/);
@@ -13888,15 +14141,13 @@
                             }
                         }
                     });
-
-
                 };
                 let geneUrl = () => {
                     let actions = [];
                     [].forEach.call(actionCon.children, action => {
                         if (!action) return;
                         let sel = action.dataset.sel;
-                        let val = action.dataset.val;
+                        let val = action.dataset.val || '';
                         switch(action.dataset.type) {
                             case "click":
                                 actions.push(`click(${sel.replace(/([=&])/g, '\\$1')})`);
@@ -13907,7 +14158,11 @@
                             case "sleep":
                                 actions.push(`sleep(${val})`);
                                 break;
+                            case "loopEnd":
+                                actions.push('loopEnd');
+                                break;
                             default:
+                                actions.push(`${action.dataset.type}(${val.replace(/([=&])/g, '\\$1')})`);
                                 break;
                         }
                     });
@@ -13920,18 +14175,70 @@
                 closeCrawlBtn.addEventListener("click", e => {
                     addFrame.classList.remove("crawling");
                 });
+                let targetInput;
+                let clickSthHandler = e => {
+                    if (addFrame.style.display === '') return;
+                    if (/INPUT|TEXTAREA|SELECT|OPTION/i.test(e.target.nodeName)) {
+                        return;
+                    }
+                    addAction('click', picker.geneSelector(e.target, true));
+                };
+                let changeHandler = e => {
+                    if (addFrame.style.display === '') return;
+                    addAction('input', picker.geneSelector(e.target, true), e.target.value);
+                };
+                let keydownHandler = e => {
+                    if (addFrame.style.display === '') return;
+                    if (e.keyCode == 27) {
+                        addFrame.style.display = '';
+                        document.removeEventListener('keydown', keydownHandler, true);
+                        document.removeEventListener('click', clickSthHandler);
+                        document.removeEventListener('change', changeHandler);
+                    } else if (e.keyCode == 13) {
+                        //enter
+                        e.preventDefault();
+                        e.stopPropagation();
+                        e.target && e.target.blur && e.target.blur();
+                        addFrame.style.display = '';
+                        document.removeEventListener('keydown', keydownHandler, true);
+                        document.removeEventListener('click', clickSthHandler);
+                        document.removeEventListener('change', changeHandler);
+                    }
+                };
+                recordBtn.addEventListener("click", e => {
+                    alert(i18n("startRecord"));
+                    addFrame.style.display = 'none';
+                    setTimeout(() => {
+                        document.addEventListener('keydown', keydownHandler, true);
+                        document.addEventListener('click', clickSthHandler);
+                        document.addEventListener('change', changeHandler);
+                    }, 100);
+                });
+                let inLoop = false;
+                loopBtn.addEventListener("click", e => {
+                    if (inLoop) {
+                        addAction('loopEnd');
+                        loopBtn.innerText = i18n("loopAction");
+                    } else {
+                        let loopTimes = prompt(i18n('loopTimes'), 1);
+                        if (!loopTimes) return;
+                        addAction('loopStart', '', loopTimes || '1');
+                        loopBtn.innerText = i18n("loopActionEnd");
+                    }
+                    inLoop = !inLoop;
+                });
                 inputAction.addEventListener("click", e => {
                     picker.getSelector(selector => {
                         addAction('input', selector, '%s');
                         addFrame.style.display = '';
-                    });
+                    }, !inLoop);
                     addFrame.style.display = 'none';
                 });
                 clickAction.addEventListener("click", e => {
                     picker.getSelector(selector => {
                         addAction('click', selector);
                         addFrame.style.display = '';
-                    });
+                    }, !inLoop);
                     addFrame.style.display = 'none';
                 });
                 sleepAction.addEventListener("click", e => {
@@ -13940,17 +14247,19 @@
                     if (sleepTime) addAction('sleep', '', sleepTime);
                 });
                 submitCrawl.addEventListener("click", e => {
-                    urlInput.value = location.href + '#p{' + geneUrl() + '}';
+                    let actionUrl = geneUrl();
+                    if (actionUrl) {
+                        urlInput.value = location.href + '#p{' + actionUrl + '}';
+                    }
                     addFrame.classList.remove("crawling");
                 });
             }
-            crawlBtn.style.display = showCrawl ? '' : 'none';
             searchBar.addToShadow(addFrame);
             siteKeywords.value = "";
             siteMatch.value = "";
-            nameInput.value = name;
-            descInput.value = description;
-            urlInput.value = url;
+            nameInput.value = name || "";
+            descInput.value = description || "";
+            urlInput.value = url || "";
             if (icons && icons[0]) {
                 iconShow.style.display = "";
                 if (url.indexOf(location.origin) === 0) {
@@ -13965,7 +14274,7 @@
                     iconShow.src = icons[0];
                 }
             } else {
-                iconShow.src = location.origin + "/favicon.ico";
+                iconShow.src = (/^(showTips:)?https?:/.test(url) ? url.split('\n')[0].replace(/^(showTips:)?(https?:\/\/[^\/]+).*/, '$2') : location.origin) + "/favicon.ico";
             }
             iconsCon.innerHTML = createHTML();
             if (icons && icons.length > 1) {
@@ -14333,10 +14642,18 @@
             if (_searchData) {
                 searchData = _searchData;
             }
+            if (!searchData.lastModified) {
+                searchData.sitesConfig = sitesConfig;
+            }
             if (searchData.prefConfig.lang && searchData.prefConfig.lang != '0') {
                 lang = searchData.prefConfig.lang;
             }
             setLang();
+            if (searchData.prefConfig.firstRun) {
+                _GM_openInTab(firstRunPage, {active: true});
+                searchData.prefConfig.firstRun = false;
+                storage.setItem("searchData", searchData);
+            }
             //旧版兼容
             if (typeof searchData.prefConfig.customSize === "undefined") {
                 searchData.prefConfig.customSize = 100;
@@ -14399,6 +14716,10 @@
                 if (lang === "zh-CN") {
                     searchData.prefConfig.suggestType = "baidu";
                 } else searchData.prefConfig.suggestType = "google";
+            }
+            if (searchData.prefConfig.minSizeMode) {
+                searchData.prefConfig.disableAutoOpen = false;
+                searchData.prefConfig.disableTypeOpen = false;
             }
             if (ext) {
                 configPage = chrome.runtime.getURL('config/index.html');;
@@ -14511,7 +14832,7 @@
                     }
                 }
                 initView();
-                initConfig();
+                await initConfig();
                 initMycroft();
                 initRun();
                 if (cb) cb();
@@ -14523,6 +14844,7 @@
         function checkVisibility() {
             if (document.hidden) {
                 if (searchBar) searchBar.closeShowAll();
+                else return;
                 if (!searchData.prefConfig.globalSearchNow) return;
                 checkGlobalIntv = setInterval(async () => {
                     let oldGlobalInPageWords = globalInPageWords;
@@ -14545,14 +14867,14 @@
                 storage.getItem("globalInPageWords", data => {
                     globalInPageWords = (data || '');
                     if (oldGlobalInPageWords != globalInPageWords) {
-                        searchBar.refreshPageWords();
+                        if (searchBar) searchBar.refreshPageWords();
                     }
                 });
                 let oldNavEnable = navEnable || false;
                 storage.getItem("navEnable", data => {
                     navEnable = (typeof data === "undefined" ? true : data);
                     if (oldNavEnable != navEnable) {
-                        searchBar.refreshNav();
+                        if (searchBar) searchBar.refreshNav();
                     }
                 });
             });

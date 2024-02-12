@@ -10,7 +10,7 @@
 // @description:zh-TW    線上看圖工具，支援圖片翻轉、旋轉、縮放、彈出大圖、批量儲存
 // @description:pt-BR    Poderosa ferramenta de visualização de imagens on-line, que pode pop-up/dimensionar/girar/salvar em lote imagens automaticamente
 // @description:ru       Мощный онлайн-инструмент для просмотра изображений, который может автоматически отображать/масштабировать/вращать/пакетно сохранять изображения
-// @version              2023.12.30.1
+// @version              2024.2.8.2
 // @icon                 data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAMAAADXqc3KAAAAV1BMVEUAAAD////29vbKysoqKioiIiKysrKhoaGTk5N9fX3z8/Pv7+/r6+vk5OTb29vOzs6Ojo5UVFQzMzMZGRkREREMDAy4uLisrKylpaV4eHhkZGRPT08/Pz/IfxjQAAAAgklEQVQoz53RRw7DIBBAUb5pxr2m3/+ckfDImwyJlL9DDzQgDIUMRu1vWOxTBdeM+onApENF0qHjpkOk2VTwLVEF40Kbfj1wK8AVu2pQA1aBBYDHJ1wy9Cf4cXD5chzNAvsAnc8TjoLAhIzsBao9w1rlVTIvkOYMd9nm6xPi168t9AYkbANdajpjcwAAAABJRU5ErkJggg==
 // @namespace            https://github.com/hoothin/UserScripts
 // @homepage             https://www.hoothin.com
@@ -44,8 +44,8 @@
 // @grant                GM.notification
 // @grant                unsafeWindow
 // @require              https://greasyfork.org/scripts/6158-gm-config-cn/code/GM_config%20CN.js?version=23710
-// @require              https://update.greasyfork.org/scripts/438080/1303651/pvcep_rules.js
-// @require              https://update.greasyfork.org/scripts/440698/1262309/pvcep_lang.js
+// @require              https://update.greasyfork.org/scripts/438080/1322681/pvcep_rules.js
+// @require              https://update.greasyfork.org/scripts/440698/1311439/pvcep_lang.js
 // @downloadURL          https://greasyfork.org/scripts/24204-picviewer-ce/code/Picviewer%20CE+.user.js
 // @updateURL            https://greasyfork.org/scripts/24204-picviewer-ce/code/Picviewer%20CE+.meta.js
 // @match                *://*/*
@@ -11738,7 +11738,7 @@ ImgOps | https://imgops.com/#b#`;
                 let isPost = option && /^post$/i.test(option.method);
                 _GM_xmlhttpRequest({
                     method: (option && option.method) || 'GET',
-                    url: url,
+                    url: url.trim(),
                     data: (option && option.body) || '',
                     headers: (option && option.headers) || {
                         referer: url,
@@ -11774,6 +11774,34 @@ ImgOps | https://imgops.com/#b#`;
         }
     } else GM_fetch = fetch;
 
+    var canvas = document.createElement('CANVAS');
+    if (document.body) {
+        if (canvas.style) canvas.style.display = "none";
+        document.body.appendChild(canvas);
+        if (typeof canvas.getContext === 'undefined') {
+            document.body.removeChild(canvas);
+            canvas = null;
+        } else {
+            document.body.removeChild(canvas);
+        }
+    }
+    function icon2Base64(icon, content, iconStyle) {
+        if (!content || !canvas) return false;
+        let size = Math.min((icon.clientWidth || icon.offsetWidth), (icon.clientHeight || icon.offsetHeight));
+        if (!size) return false;
+        canvas.width = size;
+        canvas.height = size;
+        var ctx = canvas.getContext("2d");
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.font = iconStyle.font || (iconStyle.fontSize + " " + iconStyle.fontFamily);
+        ctx.strokeStyle = iconStyle.color || "black";
+        ctx.fillStyle = iconStyle.color || "black";
+        ctx.textBaseline = "top";
+        let metrics = ctx.measureText(content);
+        ctx.fillText(content, (canvas.width - metrics.width) / 2, (canvas.height - parseInt(iconStyle.fontSize)) / 2);
+        return canvas.toDataURL("image/png");
+    }
+
     function getRightSaveName(url, name, type, _ext) {
         /*
          0: i18n("default"),
@@ -11787,7 +11815,7 @@ ImgOps | https://imgops.com/#b#`;
         url = url.replace(/.*?\/\/[^\/]+\//, "");
         let nameFromUrl = "";
         let ext;
-        if (_ext) {
+        if (_ext && /^\w{2,5}$/.test(_ext)) {
             ext = "." + _ext;
         } else {
             ext = url.match(/(\.\w{2,5})(\?|@|$)/);
@@ -11825,10 +11853,35 @@ ImgOps | https://imgops.com/#b#`;
         }
         return name.replace(/.*\/([^\/]+?)(\?|@|$).*/, "$1").replace(/[\*\/:<>\?\\\|]/g, "").replace(/\.\w{2,5}$/, "").trim() + (ext || ".png");
     }
+    function canonicalUri(src) {
+        if (src.charAt(0) == "#") return location.href + src;
+        if (src.charAt(0) == "?") return location.href.replace(/^([^\?#]+).*/, "$1" + src);
+        var root_page = /^[^?#]*\//.exec(location.href)[0],
+            base_path = location.pathname.replace(/\/[^\/]+\.[^\/]+$/, "/"),
+            root_domain = /^\w+\:\/\/\/?[^\/]+/.exec(root_page)[0],
+            absolute_regex = /^\w+\:\/\//;
+        src = src.replace("./", "");
+        if (/^\/\/\/?/.test(src)) {
+            src = location.protocol + src;
+        }
+        else if (!absolute_regex.test(src) && src.charAt(0) != "/"){
+            src = (base_path || "") + src;
+        }
+        return (absolute_regex.test(src) ? src : ((src.charAt(0) == "/" ? root_domain : root_page) + src));
+    }
     var _GM_download = (typeof GM_download == 'undefined') ? (url, name, type) => {
-        name = document.title + " - " + getRightSaveName(url, name, type);
-        saveAs(url, name);
+        url = canonicalUri(url);
+        urlToBlob(url, (blob, ext) => {
+            if(blob){
+                try {
+                    saveAs(blob, document.title + " - " + getRightSaveName(url, name, type, ext));
+                } catch(e) {
+                    console.log(e);
+                }
+            }
+        });
     } : (url, name, type) => {
+        url = canonicalUri(url);
         name = document.title + " - " + getRightSaveName(url, name, type);
         let urlSplit = ["", ""];
         if (url.split) {
@@ -11844,23 +11897,21 @@ ImgOps | https://imgops.com/#b#`;
             }],
             onerror: e => {
                 console.log(e);
-                saveAs(url, name);
             },
             ontimeout: e => {
                 console.log(e);
-                saveAs(url, name);
             }
         })
     };
     function dataURLToCanvas(dataurl, cb){
         if(!dataurl)return cb(null);
-        var canvas = document.createElement('CANVAS');
         var ctx = canvas.getContext('2d');
         var img = new Image();
         img.setAttribute("crossOrigin","anonymous");
         img.onload = function(){
             canvas.width = img.width;
             canvas.height = img.height;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.drawImage(img, 0, 0);
             cb(canvas);
         };
@@ -11869,10 +11920,14 @@ ImgOps | https://imgops.com/#b#`;
         };
         img.src = dataurl;
     }
-    function urlToBlob(url, cb, forcePng) {
+    function urlToBlob(url, cb, forcePng, tryTimes = 0) {
+        tryTimes++;
+        if (tryTimes > 3) {
+            return cb(null, '');
+        }
         _GM_xmlhttpRequest({
             method: 'GET',
-            url: url,
+            url: url.trim(),
             responseType:'blob',
             timeout:20000,
             headers: {
@@ -11883,7 +11938,7 @@ ImgOps | https://imgops.com/#b#`;
             onload: function(d) {
                 let blob = d.response;
                 let ext = blob.type.replace(/.*image\/(\w+).*/, "$1");
-                if (ext == "webp" || forcePng) {
+                if (canvas && (ext == "webp" || forcePng)) {
                     var self = this;
                     var a = new FileReader();
                     a.readAsDataURL(blob);
@@ -11895,17 +11950,19 @@ ImgOps | https://imgops.com/#b#`;
                         });
                     };
                     a.onerror = function (e){
-                        cb(null, '');
+                        urlToBlob(url, cb, forcePng, tryTimes);
                     }
-                }else{
+                } else if (!blob || !blob.size) {
+                    urlToBlob(url, cb, forcePng, tryTimes);
+                } else {
                     cb(blob, ext);
                 }
             },
             onerror: function(){
-                cb(null, '');
+                urlToBlob(url, cb, forcePng, tryTimes);
             },
             ontimeout: function(){
-                cb(null, '');
+                urlToBlob(url, cb, forcePng, tryTimes);
             }
         });
     }
@@ -11946,7 +12003,7 @@ ImgOps | https://imgops.com/#b#`;
     function createScript(html){
         return escapeHTMLPolicy?escapeHTMLPolicy.createScript(html):html;
     }
-    function init(topObject,window,document,arrayFn,envir,storage,unsafeWindow){
+    async function init(topObject,window,document,arrayFn,envir,storage,unsafeWindow){
         // 默认设置，请到设置界面修改
         prefs={
             floatBar:{//浮动工具栏相关设置.
@@ -12005,6 +12062,11 @@ ImgOps | https://imgops.com/#b#`;
                 wheelZoom:{//滚轮缩放.
                     enabled:true,
                     pauseFirst:true,//需要暂停(单击暂停)后,才能缩放.(推荐,否则因为放大镜会跟着鼠标,如果放大镜过大,那么会影响滚动.)..
+                    scaleImage:true,
+                    ctrl: false,
+                    alt: false,
+                    shift: false,
+                    meta: false,
                     range:[0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1,1.1,1.2,1.3,1.4,1.5,1.7,1.9,2,2.5,3.0,4.0,5.0,6.0,7.0,8.0,9.0],//缩放的范围
                 },
             },
@@ -12019,6 +12081,7 @@ ImgOps | https://imgops.com/#b#`;
                 exportType:'grid',
                 sidebarPosition: 'bottom',//'top' 'right' 'bottom' 'left'  四个可能值
                 sidebarSize: 120,//侧栏的高（如果是水平放置）或者宽（如果是垂直放置）
+                backgroundColor: 'rgba(20,20,20,0.75)',
                 sidebarToggle: true, // 是否显示隐藏按钮
                 transition:false,//大图片区的动画。
                 preload:true,//对附近的图片进行预读。
@@ -12110,6 +12173,7 @@ ImgOps | https://imgops.com/#b#`;
                     for (let i in lazyImgAttr) {
                         let attrName = lazyImgAttr[i];
                         let attrValue = this.getAttribute(attrName);
+                        if (/\bimagecover\.\w+$/i.test(attrValue)) continue;
                         if (attrValue) {
                             newsrc = attrValue;
                             break;
@@ -12357,17 +12421,55 @@ ImgOps | https://imgops.com/#b#`;
             };
         }
 
-        unsafeWindow.CanvasRenderingContext2D.prototype.drawImage = function() {
-            var orig = unsafeWindow.CanvasRenderingContext2D.prototype.drawImage;
-            return function() {
-                let image = arguments[0];
-                if (image && image.src) {
-                    this.canvas.dataset.src = image.src;
+        const blobUrlMap = new Map();
+        if (!envir.firefox) {
+            const drawImageProxy = new Proxy(unsafeWindow.CanvasRenderingContext2D.prototype.drawImage, {
+                apply: function (target, thisArg, argumentsList) {
+                    let image = argumentsList[0];
+                    if (image && image.src) {
+                        thisArg.canvas.dataset.src = image.src;
+                    }
+                    const result = target.apply(thisArg, argumentsList);
+                    return result;
                 }
-                var rv = orig.apply(this, arguments);
-                return rv;
+            });
+            unsafeWindow.CanvasRenderingContext2D.prototype.drawImage = drawImageProxy;
+
+            const createObjectURLProxy = new Proxy(unsafeWindow.URL.createObjectURL, {
+                apply: function (target, thisArg, argumentsList) {
+                    const blob = argumentsList[0];
+                    const blobUrl = target.apply(thisArg, argumentsList);
+                    blobUrlMap.set(blobUrl, blob);
+                    return blobUrl;
+                }
+            });
+            unsafeWindow.URL.createObjectURL = createObjectURLProxy;
+        }
+
+        function getBlob(url) {
+            return blobUrlMap.get(url) || null;
+        }
+
+        function blobToDataURL(blob, cb) {
+            var a = new FileReader();
+            a.readAsDataURL(blob);
+            a.onload = function (e){
+                cb(e.target.result);
             };
-        }();
+            a.onerror = function (e){
+                cb(null);
+            }
+        }
+
+        async function getBase64FromBlobUrl(blobUrl) {
+            let blob = getBlob(blobUrl);
+            if (!blob) return "";
+            return new Promise(resolve => {
+                blobToDataURL(blob, base64 => {
+                    resolve(base64);
+                });
+            });
+        }
 
         var rulerEle = document.createElement("span");
         if (rulerEle.style) {
@@ -12375,6 +12477,7 @@ ImgOps | https://imgops.com/#b#`;
             rulerEle.style.whiteSpace = "nowrap";
         }
         function visualLength(str,size,family) {
+            if (!rulerEle.style) return 230;
             rulerEle.style.fontSize = size || "inherit";
             rulerEle.style.fontFamily = family || "inherit";
             rulerEle.innerText = str;
@@ -14869,7 +14972,7 @@ ImgOps | https://imgops.com/#b#`;
                                     zip.file(imgName.replace(/\//g, "").replace(/\.webp$/, ".png"), blob);
                                 } else console.debug("error: "+imgSrc);
                                 downloaded++;
-                                self.showTips("Downloading "+downloaded+"/"+len, 100000);
+                                self.showTips("Downloading "+downloaded+"/"+len, 1000000);
                                 if(downloaded == len){
                                     self.showTips("Begin compress to ZIP...", 100000);
                                     zip.generateAsync({type:"blob"}, meta=>{self.showCompressProgress(meta)}).then(function(content){
@@ -14879,9 +14982,9 @@ ImgOps | https://imgops.com/#b#`;
                                 }
                             });
                         }
-                        if(/^data:/.test(imgSrc) || imgSrc.split("/")[2]==document.domain){
+                        if(canvas && (/^data:/.test(imgSrc) || imgSrc.split("/")[2] == document.domain)){
                             self.dataURLToCanvas(imgSrc, canvas=>{
-                                self.showTips("Downloading "+(downloaded+1)+"/"+len, 100000);
+                                self.showTips("Downloading "+(downloaded+1)+"/"+len, 1000000);
                                 if(!canvas){
                                     crosHandler(imgSrc);
                                     return;
@@ -15309,38 +15412,15 @@ ImgOps | https://imgops.com/#b#`;
                     this.addViewmoreItem(nodes);
                 }
             },
-            corsUrlToBlob:function (url, cb){
-                if(!url)return cb(null);
-                _GM_xmlhttpRequest({
-                    method: 'GET',
-                    url: url,
-                    responseType:'arraybuffer',
-                    timeout:20000,
-                    headers: {
-                        origin: location.origin,
-                        referer: location.href,
-                        accept: "*/*"
-                    },
-                    onload: function(d) {
-                        cb(d.response);
-                    },
-                    onerror: function(){
-                        cb(null);
-                    },
-                    ontimeout: function(){
-                        cb(null);
-                    }
-                });
-            },
             dataURLToCanvas:function (dataurl, cb){
                 if(!dataurl)return cb(null);
-                var canvas = document.createElement('CANVAS');
                 var ctx = canvas.getContext('2d');
                 var img = new Image();
                 img.setAttribute("crossOrigin","anonymous");
                 img.onload = function(){
                     canvas.width = img.width;
                     canvas.height = img.height;
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
                     ctx.drawImage(img, 0, 0);
                     cb(canvas);
                 };
@@ -15349,19 +15429,9 @@ ImgOps | https://imgops.com/#b#`;
                 };
                 img.src = dataurl;
             },
-            blobToDataURL:function(blob, cb){
-                var a = new FileReader();
-                a.readAsDataURL(blob);
-                a.onload = function (e){
-                    cb(e.target.result);
-                };
-                a.onerror = function (e){
-                    cb(null);
-                }
-            },
             blobToCanvas: function (blob, cb){
                 var self=this;
-                this.blobToDataURL(blob, function (dataurl){
+                blobToDataURL(blob, function (dataurl){
                     self.dataURLToCanvas(dataurl, cb);
                 });
             },
@@ -16416,22 +16486,6 @@ ImgOps | https://imgops.com/#b#`;
                 if(!next)next=curPage.querySelector('[rel="next"]');
                 return {pre:pre,next:next};
             },
-            canonicalUri:function(src){
-                if (src.charAt(0) == "#") return location.href + src;
-                if (src.charAt(0) == "?") return location.href.replace(/^([^\?#]+).*/, "$1" + src);
-                var root_page = /^[^?#]*\//.exec(location.href)[0],
-                    base_path = location.pathname.replace(/\/[^\/]+\.[^\/]+$/, "/"),
-                    root_domain = /^\w+\:\/\/\/?[^\/]+/.exec(root_page)[0],
-                    absolute_regex = /^\w+\:\/\//;
-                src=src.replace("./", "");
-                if (/^\/\/\/?/.test(src)){
-                    src = location.protocol + src;
-                }
-                else if (!absolute_regex.test(src) && src.charAt(0) != "/"){
-                    src = (base_path || "") + src;
-                }
-                return (absolute_regex.test(src) ? src : ((src.charAt(0) == "/" ? root_domain : root_page) + src));
-            },
             completePages:[location.href],
             href:location.href,
             pageAllReady:false,
@@ -16487,7 +16541,7 @@ ImgOps | https://imgops.com/#b#`;
                 }else{
                     self.completePages.push(href);
                 }
-                self.href=self.canonicalUri(href);
+                self.href=canonicalUri(href);
                 _GM_xmlhttpRequest({
                     method: 'GET',
                     url: self.href,
@@ -16519,6 +16573,7 @@ ImgOps | https://imgops.com/#b#`;
                             return false;
                         });
                         function loadImg(img){
+                            img.onerror = null;
                             var result = findPic(img);
                             self.loadingImgNum++;
                             if (result.xhr) {
@@ -16765,9 +16820,9 @@ ImgOps | https://imgops.com/#b#`;
                 return stop;
             },
 
-            reload: function() {// 重新加载所有图片到库里面
+            reload: async function() {// 重新加载所有图片到库里面
                 // 函数在 LoadingAnimC 中
-                var data = this.getAllValidImgs();
+                var data = await this.getAllValidImgs();
                 // 设置当前选中的图片
                 data.target = {
                     src: this.selected.dataset.src
@@ -16777,14 +16832,14 @@ ImgOps | https://imgops.com/#b#`;
 
                 this.load(data, null, true);
             },
-            reloadNew: function() {// 加载新的图片到库里面
+            reloadNew: async function() {// 加载新的图片到库里面
                 var newer = true;
-                var data = this.getAllValidImgs(newer);
+                var data = await this.getAllValidImgs(newer);
                 if (data.length) {
                     this._appendThumbSpans(data);
                 }
             },
-            getAllValidImgs:function(newer){
+            getAllValidImgs:async function(newer, checkListenBg){
                 var validImgs = [];
                 var container = document.querySelector('.pv-gallery-container'),
                     preloadContainer = document.querySelector('.pv-gallery-preloaded-img-container');
@@ -16810,14 +16865,17 @@ ImgOps | https://imgops.com/#b#`;
                                 if (!node.src) {
                                     node.src = node.toDataURL("image/png");
                                 }
-                                total.push(node);
                             } catch(e) {}
                         }
                         if (!node.src && node.dataset.src) {
                             node.src = node.dataset.src;
-                            delete node.dataset.src;
+                        }
+                        if (node.src) {
                             total.push(node);
                         }
+                    }
+                    if (checkListenBg && !prefs.floatBar.listenBg) {
+                        return total;
                     }
                     if(!node.className || !node.className.indexOf || node.className.indexOf("pv-")==-1){
                         let prop = getComputedStyle(node).backgroundImage;
@@ -16887,6 +16945,23 @@ ImgOps | https://imgops.com/#b#`;
                                 }
                             }
                         }
+                        let iconStyle = getComputedStyle(node, '::before');
+                        prop = iconStyle.content;
+                        if (!prop || prop === "none") {
+                            iconStyle = getComputedStyle(node, '::after');
+                            prop = iconStyle.content;
+                        }
+                        if (prop && prop !== "none") {
+                            prop = prop.replace(/[ '"]/g, "");
+                            if (prop && prop.length == 1) {
+                                let src = icon2Base64(node, prop, iconStyle);
+                                if (src && src != "data:,") {
+                                    node = document.createElement("img");
+                                    node.src = src;
+                                    total.push(node);
+                                }
+                            }
+                        }
                     }
                     return total;
                 }, []);
@@ -16917,24 +16992,41 @@ ImgOps | https://imgops.com/#b#`;
                     return !(container.contains(img) || (preloadContainer&&preloadContainer.contains(img)));
                 });
 
+                await sleep(0);
                 // 已经在图库里面的
                 var self = this;
-                imgs.forEach(function(img) {
+                for (const img of imgs) {
                     let isImg = /^IMG$/i.test(img.nodeName);
                     if (isImg) {
                         pretreatment(img);
                     }
-                    if(!img.src || (isImg && img.getAttribute && !img.getAttribute("src"))) return;
-                    if (newer && self._dataCache[img.src]) return;
+                    if(!img.src || (isImg && img.getAttribute && !img.getAttribute("src"))) continue;
+                    if (newer && self._dataCache[img.src]) continue;
 
                     var result = findPic(img);
                     if (result) {
+                        if (result.src === 'data:,') continue;
+
+                        if (result.imgSrc.indexOf('blob:') === 0){
+                            if (result.src == result.imgSrc) {
+                                result.imgSrc = await getBase64FromBlobUrl(result.imgSrc);
+                                result.src = result.imgSrc;
+                                result.srcs = [result.imgSrc];
+                            } else {
+                                result.imgSrc = await getBase64FromBlobUrl(result.imgSrc);
+                                result.srcs = [result.imgSrc];
+                            }
+                        }
+                        if (result.sizeH == 0 && result.sizeW == 0) {
+                            result.sizeH = img.naturalHeight;
+                            result.sizeW = img.naturalWidth;
+                        }
                         validImgs.push(result);
                         self.data.push(result);
                     }
 
                     self._dataCache[img.src] = true;
-                });
+                }
 
                 return validImgs;
             },
@@ -17079,8 +17171,8 @@ ImgOps | https://imgops.com/#b#`;
                     left: 0;\
                     width: 100%;\
                     height: 100%;\
-                    min-width:none;\
-                    min-height:none;\
+                    min-width:unset;\
+                    min-height:unset;\
                     padding: 0;\
                     margin: 0;\
                     border: none;\
@@ -17154,7 +17246,7 @@ ImgOps | https://imgops.com/#b#`;
                      column-count: 2;\
                      -moz-column-count: 2;\
                      -webkit-column-count: 2;\
-                     padding-top: 300px;\
+                     padding-top: 200px;\
                      }\
                      .pv-gallery-sidebar-viewmore.showmore{\
                      transform: scale(3.5);\
@@ -17171,13 +17263,27 @@ ImgOps | https://imgops.com/#b#`;
                     }\
                     @media only screen and (min-width: 800px) {\
                      .pv-gallery-maximize-container{\
-                     column-count: 5;\
-                     -moz-column-count: 5;\
-                     -webkit-column-count: 5;\
+                     column-count: 3;\
+                     -moz-column-count: 3;\
+                     -webkit-column-count: 3;\
                      padding-top: 30px;\
                      }\
                      .pv-gallery-maximize-container span>p{\
                      opacity: 0;\
+                     }\
+                    }\
+                    @media only screen and (min-width: 1000px) {\
+                     .pv-gallery-maximize-container{\
+                     column-count: 4;\
+                     -moz-column-count: 4;\
+                     -webkit-column-count: 4;\
+                     }\
+                    }\
+                    @media only screen and (min-width: 1500px) {\
+                     .pv-gallery-maximize-container{\
+                     column-count: 5;\
+                     -moz-column-count: 5;\
+                     -webkit-column-count: 5;\
                      }\
                     }\
                     span.pv-gallery-tipsWords{\
@@ -17416,9 +17522,16 @@ ImgOps | https://imgops.com/#b#`;
                     max-width:50px;\
                     height:20px;\
                     background: white;\
+                    box-sizing: border-box;\
+                    display: initial;\
+                    margin: 0 5px;\
+                    padding: 0 5px;\
                     }\
                     .pv-gallery-head-command-drop-list-item input[type=checkbox]{\
-                    width:20px\
+                    width:20px;\
+                    box-sizing: border-box;\
+                    display: initial;\
+                    margin: 0 5px;\
                     }\
                     .pv-gallery-head-command-drop-list-item > * {\
                     vertical-align:middle;\
@@ -17426,7 +17539,11 @@ ImgOps | https://imgops.com/#b#`;
                     }\
                     .pv-gallery-head-command-drop-list-item label {\
                     font-weight: normal;\
-                    display:inline\
+                    display:inline;\
+                    font-size:unset;\
+                    }\
+                    .pv-gallery-head-command-drop-list-item label:after {\
+                    display:none;\
                     }\
                     .pv-gallery-head-command-drop-list-item:hover{\
                     background-color:#404040;\
@@ -17500,7 +17617,7 @@ ImgOps | https://imgops.com/#b#`;
                     height: 100%;\
                     width: 100%;\
                     background-clip: padding-box;\
-                    background-color: rgba(20,20,20,0.75);\
+                    background-color: ' + (prefs.gallery.backgroundColor || 'rgba(20,20,20,0.75)') + ';\
                     position:relative;\
                     transition: background-color .3s ease;\
                     }\
@@ -17647,6 +17764,7 @@ ImgOps | https://imgops.com/#b#`;
                     border:5px solid #313131;\
                     margin:1px;\
                     opacity:0.3;\
+                    box-sizing: content-box;\
                     background-color: #282828cc;\
                     '+
                     (prefs.gallery.transition ? ('\
@@ -17701,7 +17819,7 @@ ImgOps | https://imgops.com/#b#`;
                     line-height:0;\
                     text-align:center;\
                     background-color:#00000060;\
-                    color:#757575;\
+                    color:#a1a1a1;\
                     white-space:nowrap;\
                     cursor:pointer;\
                     z-index:1;\
@@ -17809,7 +17927,7 @@ ImgOps | https://imgops.com/#b#`;
                     border: 5px solid #ff0000;\
                     }\
                     .pv-gallery-maximize-container img{\
-                    width:100%;\
+                    max-width: 100%;\
                     transition: transform .3s ease 0s;\
                     transform: scale3d(1, 1, 1);\
                     cursor: zoom-in;\
@@ -17927,7 +18045,7 @@ ImgOps | https://imgops.com/#b#`;
                     }\
                     .pv-gallery-sidebar-viewmore-bottom{\
                     display: block;\
-                    bottom:12px;\
+                    bottom:15px;\
                     }\
                     .pv-gallery-sidebar-viewmore-bottom.showmore{\
                     background-color: rgb(42, 42, 42);\
@@ -17943,7 +18061,7 @@ ImgOps | https://imgops.com/#b#`;
                     word-wrap:break-word;\
                     overflow-wrap:break-word;\
                     line-height:1.1;\
-                    font-size:12px;\
+                    font-size:18px;\
                     text-align:center;\
                     margin-bottom:8px;\
                     }\
@@ -18535,11 +18653,11 @@ ImgOps | https://imgops.com/#b#`;
                 this._clickOut=this.clickOut.bind(this);
                 this._keydown=this.keydown.bind(this);
 
-                if(prefs.magnifier.wheelZoom.enabled){
+                if (prefs.magnifier.wheelZoom.enabled || typeof prefs.magnifier.wheelZoom.scaleImage !== false) {
                     this.zoomLevel=1;
                     this.defaultDia=diameter;
                     addWheelEvent(container,this._zoom,false);
-                };
+                }
 
                 container.addEventListener('mouseover',this._focus,false);
                 container.addEventListener('mouseout',this._blur,false);
@@ -18641,8 +18759,32 @@ ImgOps | https://imgops.com/#b#`;
                 return level;
             },
             zoom:function(e){
+                if ((e.metaKey != !!prefs.magnifier.wheelZoom.meta) ||
+                   (e.altKey != !!prefs.magnifier.wheelZoom.alt) ||
+                   (e.ctrlKey != !!prefs.magnifier.wheelZoom.ctrl) ||
+                   (e.shiftKey != !!prefs.magnifier.wheelZoom.shift)) {
+                    return;
+                }
                 if(e.deltaY===0)return;//非Y轴的滚动
-                if(prefs.magnifier.wheelZoom.pauseFirst && !this.paused)return;
+                var ms=this.magnifier.style;
+                if(prefs.magnifier.wheelZoom.pauseFirst && !this.paused){
+                    if (typeof prefs.magnifier.wheelZoom.scaleImage !== false) {
+                        let curScale = ms.transform.match(/[\d\.]+/);
+                        if (curScale) {
+                            curScale = parseFloat(curScale[0]);
+                        } else curScale = 1;
+                        if (e.deltaY < 0) {
+                            curScale += 0.1;
+                        } else {
+                            curScale -= 0.1;
+                        }
+                        if (curScale < 0.5) curScale = 0.5;
+                        ms.transform = `scale(${curScale})`;
+                        e.preventDefault();
+                    }
+                    return;
+                }
+                if(!prefs.magnifier.wheelZoom.enabled)return;
                 e.preventDefault();
                 if(e.deltaY < 0){//向上滚，放大；
                     if(this.diameter >= this.maxDia)return;
@@ -18664,7 +18806,6 @@ ImgOps | https://imgops.com/#b#`;
                 var bRadius=this.radius;
                 this.radius=radius;
                 this.setMouseRange();
-                var ms=this.magnifier.style;
                 ms.width=diameter+'px';
                 ms.height=diameter+'px';
                 ms.borderRadius=radius+1 + 'px';
@@ -18780,7 +18921,6 @@ ImgOps | https://imgops.com/#b#`;
                 container.className='pv-pic-window-container';
                 container.innerHTML=createHTML(
                     '<span class="pv-pic-window-imgbox transition-transform"></span>'+
-                    '<span class="pv-pic-window-center"></span>'+
                     '<span class="pv-pic-window-rotate-indicator">'+
                     '<span class="pv-pic-window-rotate-indicator-pointer"></span>'+
                     '</span>'+
@@ -18874,12 +19014,12 @@ ImgOps | https://imgops.com/#b#`;
                 var maxButton=container.querySelector('.pv-pic-window-max');
                 maxButton.style.cssText='top: -24px;right: 46px;';
                 this.maxButton=maxButton;
-                maxButton.addEventListener('click',function(e){
+                maxButton.addEventListener('click',async function(e){
                     if(!gallery){
                         gallery=new GalleryC();
                         gallery.data=[];
                     }
-                    var allData=gallery.getAllValidImgs();
+                    var allData=await gallery.getAllValidImgs();
                     if(allData.length<1)return;
                     allData.target={src:img.src};
                     gallery.data=allData;
@@ -19015,13 +19155,6 @@ ImgOps | https://imgops.com/#b#`;
                 this.shiftKeyUp=true;
                 this.moving=false;
 
-                container.querySelector('.pv-pic-window-center').addEventListener('mousedown', function(e) {
-                    var target = e.target;
-                    target.style.display = "none";
-                    setTimeout(() => {
-                        target.style.display = "";
-                    }, 500);
-                },true);
                 //缩放工具的扩展菜单
                 container.querySelector('.pv-pic-window-tb-tool-extend-menu-zoom').addEventListener('click',function(e){
                     var target=e.target;
@@ -19079,6 +19212,11 @@ ImgOps | https://imgops.com/#b#`;
                     self.toolbarEventHandler(e);
                 },false);
 
+                toolbar.addEventListener('click',function(e){
+                    e.preventDefault();
+                    e.stopPropagation();
+                },false);
+
 
                 toolbar.addEventListener('dblclick',function(e){//鼠标双击工具
                     self.toolbarEventHandler(e);
@@ -19128,7 +19266,7 @@ ImgOps | https://imgops.com/#b#`;
                 if(prefs.imgWindow.close.dblClickImgWindow){
                     var dblClickImgWindow=function(e){
                         var target=e.target;
-                        if(target==container || target==img || target.className=='pv-pic-window-center' || target==self.imgState || target==self.rotateOverlayer){
+                        if(target==container || target==img || target==self.imgState || target==self.rotateOverlayer){
                             self.remove();
                             e.stopPropagation();
                         };
@@ -19280,7 +19418,7 @@ ImgOps | https://imgops.com/#b#`;
                 this.preButton.style.display = "none";
                 this.nextButton.style.display = "none";
             },
-            switchImage:function(fw){
+            switchImage:async function(fw){
                 if (!gallery) {
                     gallery = new GalleryC();
                     gallery.data = [];
@@ -19288,8 +19426,15 @@ ImgOps | https://imgops.com/#b#`;
                 if (gallery.shown || gallery.minimized) {
                     return;
                 }
-                var allData = gallery.getAllValidImgs();
+                var allData = await gallery.getAllValidImgs(false, true);
                 if (allData.length <= 1) return;
+                const validData = (data, src) => {
+                    if (!data || !data.img || !data.img.parentNode) return false;
+                    if (data.img.parentNode.classList.contains("pv-pic-window-container")) return false;
+                    if (data.src == src) return false;
+                    if (data.src && /^data:/.test(data.src) && data.src.length < 250) return false;
+                    return true;
+                };
                 for (let i = 0; i < allData.length; i++) {
                     let imgData = allData[i];
                     if (imgData.img == this.data.img) {
@@ -19297,7 +19442,7 @@ ImgOps | https://imgops.com/#b#`;
                             if (i != allData.length - 1) {
                                 i++;
                                 imgData = allData[i];
-                                while (imgData && imgData.img && imgData.img.parentNode && (imgData.img.parentNode.classList.contains("pv-pic-window-container") || imgData.src == this.data.src || (imgData.src && /^data:/.test(imgData.src) && imgData.src.length < 250))) {
+                                while (!validData(imgData, this.data.src)) {
                                     i++;
                                     if (i == allData.length) return;
                                     imgData = allData[i];
@@ -19312,7 +19457,7 @@ ImgOps | https://imgops.com/#b#`;
                             if (i != 0) {
                                 i--;
                                 imgData = allData[i];
-                                while (imgData && imgData.img && imgData.img.parentNode && (imgData.img.parentNode.classList.contains("pv-pic-window-container") || imgData.src == this.data.src || (imgData.src && /^data:/.test(imgData.src) && imgData.src.length < 250))) {
+                                while (!validData(imgData, this.data.src)) {
                                     i--;
                                     if (i == -1) return;
                                     imgData = allData[i];
@@ -19554,20 +19699,8 @@ ImgOps | https://imgops.com/#b#`;
                     right: 8px;\
                     background-image: url("'+prefs.icons.arrowRight+'");\
                     }\
-                    .compare>.pv-pic-window-center,\
                     .compare>.pv-pic-search-state{\
                     display: none;\
-                    }\
-                    .pv-pic-window-center {\
-                    position: absolute;\
-                    height: 20%;\
-                    width: 20%;\
-                    top: 40%;\
-                    left: 40%;\
-                    opacity: 0;\
-                    }\
-                    .pv-pic-window-container>.pv-pic-window-center:hover~.pv-pic-search-state {\
-                    opacity: 0;\
                     }\
                     .pv-pic-window-container_focus .pv-pic-window-imgbox:hover~.pv-pic-window-pre,\
                     .pv-pic-window-container_focus .pv-pic-window-imgbox:hover~.pv-pic-window-next{\
@@ -19669,16 +19802,20 @@ ImgOps | https://imgops.com/#b#`;
                     .pv-pic-window-scroll {\
                     max-height: calc(100vh - 26px);\
                     max-width: 100vw;\
+                    }\
+                    .pv-pic-window-scroll>.pv-pic-window-imgbox {\
+                    max-height: calc(100vh - 26px);\
+                    max-width: 100vw;\
                     overflow-y: scroll;\
                     overflow-x: hidden;\
+                    overscroll-behavior: contain;\
+                    -ms-scroll-chaining: contain;\
                     }\
                     .pv-pic-window-scroll>.pv-pic-window-scrollSign {\
                     display: block;\
                     }\
                     .pv-pic-window-scroll>.pv-pic-window-close,\
                     .pv-pic-window-scroll>.pv-pic-window-max,\
-                    .pv-pic-window-scroll>.pv-pic-window-pre,\
-                    .pv-pic-window-scroll>.pv-pic-window-next,\
                     .pv-pic-window-scroll>.pv-pic-search-state {\
                     display: none;\
                     }\
@@ -19879,8 +20016,8 @@ ImgOps | https://imgops.com/#b#`;
                     padding:0;\
                     background-color:rgba(255, 0, 0, 0.150);\
                     }\
-                    .pv-pic-window-container::-webkit-scrollbar { width: 0 !important }\
-                    .pv-pic-window-container { -ms-overflow-style: none;overflow: -moz-scrollbars-none; }\
+                    .pv-pic-window-container::-webkit-scrollbar, .pv-pic-window-container>.pv-pic-window-imgbox::-webkit-scrollbar { width: 0 !important }\
+                    .pv-pic-window-container, .pv-pic-window-container>.pv-pic-window-imgbox { -ms-overflow-style: none;overflow: -moz-scrollbars-none; }\
                     ');
             },
 
@@ -20188,6 +20325,7 @@ ImgOps | https://imgops.com/#b#`;
 
                 var img=this.img;
                 var imgWindow=this.imgWindow;
+                imgWindow.classList.remove("pv-pic-window-scroll");
 
                 var iTransform=img.style[support.cssTransform].replace(/rotate\([^)]*\)/i,'');
 
@@ -20767,7 +20905,7 @@ ImgOps | https://imgops.com/#b#`;
                     };
                 };
             },
-            focusedKeydown:function(e){
+            focusedKeydown:async function(e){
                 var keyCode=e.keyCode;
                 if (this.data && this.data.img && e.key.toLowerCase() == prefs.floatBar.keys.download) {
                     downloadImg(this.img.src, (this.data.img.title || this.data.img.alt), prefs.saveName);
@@ -20792,7 +20930,7 @@ ImgOps | https://imgops.com/#b#`;
                         gallery = new GalleryC();
                         gallery.data = [];
                     }
-                    var allData = gallery.getAllValidImgs();
+                    var allData = await gallery.getAllValidImgs();
                     if (allData.length < 1) return;
                     allData.target = {src: this.img.src};
                     gallery.data = allData;
@@ -20914,9 +21052,13 @@ ImgOps | https://imgops.com/#b#`;
                         var scrolled=prefs.imgWindow.fixed ? {x:0, y:0} : getScrolled();
                         var origTop=parseFloat(imgWindow.style.top);
                         if(inScroll){
-                            imgWindow.style.top = parseFloat(imgWindow.style.top) - getScrolled(imgWindow).y +'px';
+                            imgWindow.style.top = parseFloat(imgWindow.style.top) - getScrolled(imgWindow.children[0]).y +'px';
                             this.imgWindow.classList.remove("pv-pic-window-scroll");
-                        } else this.imgWindow.classList.add("pv-pic-window-scroll");
+                        } else {
+                            this.rotate(0,true);
+                            this.imgWindow.classList.add("pv-pic-window-scroll");
+                            imgWindow.children[0].scrollTop = -parseInt(imgWindow.style.top);
+                        }
                         //this.center(true , true);
                         if(!inScroll){
                             imgWindow.style.top= (wSize.h - imgWindow.offsetHeight)/2 + scrolled.y +'px';
@@ -20957,7 +21099,7 @@ ImgOps | https://imgops.com/#b#`;
                             return;
                         };
 
-                        if((e.button!=0 && e.type!="touchstart") || (target!=this.imgWindow && target.className!='pv-pic-window-center' && target!=this.img && target!=this.rotateOverlayer && target!=this.imgState))return;
+                        if((e.button!=0 && e.type!="touchstart") || (target!=this.imgWindow && target!=this.img && target!=this.rotateOverlayer && target!=this.imgState))return;
                         e.preventDefault();
                         if(this.tempHand){
                             this.move(e);
@@ -21409,7 +21551,7 @@ ImgOps | https://imgops.com/#b#`;
                 self.imgReady = imgReady(img, opts);
             },
 
-            load:function(img,e){
+            load:async function(img,e){
                 this.remove();
                 this.img=img;
                 var buttonType=this.buttonType;
@@ -21419,7 +21561,7 @@ ImgOps | https://imgops.com/#b#`;
                         gallery=new GalleryC();
                         gallery.data=[];
                     }
-                    var allData=gallery.getAllValidImgs();
+                    var allData=await gallery.getAllValidImgs();
                     allData.target=this.data;
                     this.data=allData;
                 };
@@ -21819,9 +21961,9 @@ ImgOps | https://imgops.com/#b#`;
                 }
                 var targetPosi = getContentClientRect(this.data.img);
                 var pa = this.data.img.parentNode;
-                if (pa && pa.scrollHeight > 20 && pa.scrollWidth > 20) {
+                if (pa && pa.scrollHeight > 30 && pa.scrollWidth > 30) {
                     var paPosi=getContentClientRect(pa);
-                    if (paPosi.width > 20 && paPosi.height > 20) {
+                    if (paPosi.width > 30 && paPosi.height > 30) {
                         if (this.data.img.offsetTop != 0) {
                             if (paPosi.height < targetPosi.height) {
                                 targetPosi.top = paPosi.top;
@@ -21834,7 +21976,6 @@ ImgOps | https://imgops.com/#b#`;
                         }
                     }
                 }
-                var bodyPosi=document.documentElement.getBoundingClientRect();
                 var windowSize=getWindowSize();
                 var img=this.data.img;
 
@@ -21843,16 +21984,33 @@ ImgOps | https://imgops.com/#b#`;
                 var offsetX=prefs.floatBar.offset.x;
                 var offsetY=prefs.floatBar.offset.y;
 
+                let body = getBody(document);
+                let offsetParent, bodyPosi;
+                if (unsafeWindow.getComputedStyle(body).position === "static") {
+                    offsetParent = document.documentElement;
+                    bodyPosi = {
+                        top: 0,
+                        bottom: windowSize.h,
+                        left: 0,
+                        right: windowSize.w
+                    };
+                } else {
+                    offsetParent = body;
+                    bodyPosi = offsetParent.getBoundingClientRect();
+                }
 
-                var scrolled=getScrolled();
-                targetPosi.top -= bodyPosi.top + scrolled.y - (parseInt(unsafeWindow.getComputedStyle(document.documentElement).marginTop) || 0);
-                targetPosi.left -= bodyPosi.left + scrolled.x;
+
+                var scrolled=getScrolled(offsetParent);
+                targetPosi.top = targetPosi.top - bodyPosi.top + scrolled.y;
+                targetPosi.left = targetPosi.left - bodyPosi.left + scrolled.x;
+                targetPosi.bottom = bodyPosi.bottom - targetPosi.bottom - scrolled.y;
+                targetPosi.right = bodyPosi.right - targetPosi.right - scrolled.x;
 
                 var fbs = this.floatBar.style;
                 var setPosition = {
                     top:function() {
-                        var top = targetPosi.top + scrolled.y;
-                        if (targetPosi.top + offsetY < 10) {
+                        var top = targetPosi.top;
+                        if (top + offsetY - scrolled.y < 10) {
                             top = scrolled.y;
                             offsetY = 0;
                         } else {
@@ -21863,43 +22021,34 @@ ImgOps | https://imgops.com/#b#`;
                             }
                             if (targetPosi.height <= 50) top -= 10;
                         }
+                        fbs.bottom = 'unset';
                         fbs.top = top + 'px';
                     },
                     right:function() {
-                        var right = windowSize.w - targetPosi.right;
-                        if (right < offsetX) {
-                            right = -scrolled.x;
-                            offsetX = 0;
+                        var right = targetPosi.right;
+                        if (prefs.floatBar.stayOut) {
+                            right = right - offsetX - prefs.floatBar.stayOutOffsetX;
                         } else {
-                            right -= scrolled.x;
-                            if (prefs.floatBar.stayOut) {
-                                right = right - offsetX - prefs.floatBar.stayOutOffsetX;
-                            } else {
-                                right = right - offsetX;
-                            }
-                            if (targetPosi.width <= 50) right += 10;
+                            right = right - offsetX;
                         }
+                        if (targetPosi.width <= 50) right += 10;
+                        fbs.left = 'unset';
                         fbs.right = right + 'px';
                     },
                     bottom:function() {
-                        var bottom = windowSize.h - targetPosi.bottom;
-                        if (bottom <= offsetY) {
-                            bottom = -scrolled.y;
-                            offsetY = 0;
+                        var bottom = targetPosi.bottom;
+                        if (prefs.floatBar.stayOut) {
+                            bottom = bottom - offsetY - 40 - prefs.floatBar.stayOutOffsetY;
                         } else {
-                            bottom -= scrolled.y;
-                            if (prefs.floatBar.stayOut) {
-                                bottom = bottom - offsetY - 40 - prefs.floatBar.stayOutOffsetY;
-                            } else {
-                                bottom = bottom - offsetY - 30;
-                            }
-                            if (targetPosi.height <= 50) bottom += 10;
+                            bottom = bottom - offsetY - 30;
                         }
+                        if (targetPosi.height <= 50) bottom += 10;
+                        fbs.top = 'unset';
                         fbs.bottom = bottom + 'px';
                     },
                     left:function() {
-                        var left = targetPosi.left + scrolled.x;
-                        if (targetPosi.left + offsetX < 0) {
+                        var left = targetPosi.left;
+                        if (left + offsetX - scrolled.x < 0) {
                             left = scrolled.x;
                             offsetX = 0;
                         } else {
@@ -21910,23 +22059,16 @@ ImgOps | https://imgops.com/#b#`;
                             }
                             if (targetPosi.width <= 50) left -= 10;
                         }
+                        fbs.right = 'unset';
                         fbs.left = left + 'px';
                     },
                     center:function() {
-                        var left = targetPosi.left + scrolled.x + offsetX;
+                        var left = targetPosi.left + offsetX;
                         fbs.left = left + targetPosi.width / 2 + 'px';
                     },
                     hide:function(){
-                        var top=targetPosi.top + scrolled.y;
-                        if(targetPosi.top + offsetY < 0){
-                            top=scrolled.y;
-                            offsetY=0;
-                        }
-                        var left=targetPosi.left + scrolled.x;
-                        if(targetPosi.left + offsetX < 0){
-                            left=scrolled.x;
-                            offsetX=0;
-                        }
+                        var top=targetPosi.top;
+                        var left=targetPosi.left;
                         if(prefs.floatBar.stayOut){
                             top=top + offsetY - 10 - prefs.floatBar.stayOutOffsetY;
                             left=left + offsetX - prefs.floatBar.stayOutOffsetX;
@@ -21972,7 +22114,17 @@ ImgOps | https://imgops.com/#b#`;
                     self.setPosition();
                 },100);
             },
-            open:function(e,buttonType){
+            open:async function(e,buttonType){
+                if (this.data.imgSrc.indexOf("blob:") === 0) {
+                    if (this.data.src === this.data.imgSrc) {
+                        this.data.imgSrc = await getBase64FromBlobUrl(this.data.imgSrc);
+                        this.data.src = this.data.imgSrc;
+                        this.data.srcs = [this.data.imgSrc];
+                    } else {
+                        this.data.imgSrc = await getBase64FromBlobUrl(this.data.imgSrc);
+                        this.data.srcs = [this.data.imgSrc];
+                    }
+                }
                 if (buttonType === 'download' && !this.data.xhr) {
                     downloadImg(this.data.src || this.data.imgSrc, (this.data.img.title || this.data.img.alt), prefs.saveName);
                     return;
@@ -22199,7 +22351,7 @@ ImgOps | https://imgops.com/#b#`;
                 srcs, // 备用的大图地址
                 type, // 类别
                 noActual = false, //没有原图
-                imgSrc = img.currentSrc||img.dataset.lazySrc||img.src, // img 节点的 src
+                imgSrc = img.src||img.currentSrc||img.dataset.lazySrc, // img 节点的 src
                 xhr,
                 description; // 图片的注释
             var imgCStyle = unsafeWindow.getComputedStyle(img);
@@ -22290,11 +22442,6 @@ ImgOps | https://imgops.com/#b#`;
             }
 
             if(!src)return;
-
-            if(/^blob/i.test(imgSrc)){
-                imgSrc=drawTobase64(img);
-                src=imgSrc;
-            }
 
             var ret = {
                 src: src,                  // 得到的src
@@ -22443,8 +22590,18 @@ ImgOps | https://imgops.com/#b#`;
                 return newSrc;
             },
             getImage:function(img, a, p){
-                var newSrc,rule;
+                var newSrc,rule,stopXhr = false;
                 var base64Img=/^data:/i.test(img.src);
+                if(this._xhr && this._xhr.url){
+                    newSrc = this._xhr.url.call(img, a, p);
+                    if(newSrc){
+                        this.xhr = this._xhr || null;
+                        return newSrc;
+                    }else{
+                        this.xhr = null;
+                        stopXhr = true;
+                    }
+                }
                 for(var i in this.rules){
                     rule=this.rules[i];
                     if((!rule.url || !rule.getImage) && base64Img)continue;
@@ -22452,7 +22609,7 @@ ImgOps | https://imgops.com/#b#`;
                     if(rule.exclude && rule.exclude.test(img.src))continue;
                     if(rule.getImage){
                         newSrc = rule.getImage.call(img, a, p, rule);
-                        this.xhr = (newSrc && !rule.stopXhr) ? (this._xhr || null) : null;
+                        this.xhr = (!stopXhr && newSrc && !rule.stopXhr) ? (this._xhr || null) : null;
                     }else newSrc = null;
                     if(!newSrc){
                         if(rule.r){
@@ -23053,14 +23210,6 @@ ImgOps | https://imgops.com/#b#`;
             var checkUniqueImgWin = function() {
                 if (canPreview) {
                     if (result.type != "link" && result.src == result.imgSrc) {
-                        if (!result.imgAS && !result.imgCS) {
-                            let sizeInfo = {
-                                w: result.img.offsetWidth || result.img.scrollWidth,
-                                h: result.img.offsetHeight || result.img.scrollHeight
-                            }
-                            result.imgAS = sizeInfo;
-                            result.imgCS = sizeInfo;
-                        }
                         if (result.imgAS.w <= result.imgCS.w && result.imgAS.h <= result.imgCS.h) {
                             var wSize = getWindowSize();
                             if (result.imgAS.w <= wSize.w && result.imgAS.h <= wSize.h) return false;
@@ -23096,10 +23245,6 @@ ImgOps | https://imgops.com/#b#`;
                     target = null;
                 }
                 if (target) {
-                    let sizeInfo = {
-                        w: target.offsetWidth || target.scrollWidth,
-                        h: target.offsetHeight || target.scrollHeight
-                    }
                     result = {
                         src: target.href,
                         type: "link",
@@ -23112,35 +23257,44 @@ ImgOps | https://imgops.com/#b#`;
                 return;
             }
 
+            let sizeHide = false;
             if (!result) {
                 pretreatment(target)
                 result = findPic(target);
                 if (!result) return;
+            }
+
+            if (result) {
+                if (!result.imgAS && !result.imgCS) {
+                    let sizeInfo = {
+                        w: result.img.offsetWidth || result.img.scrollWidth || target.offsetWidth || target.scrollWidth,
+                        h: result.img.offsetHeight || result.img.scrollHeight || target.offsetHeight || target.scrollHeight
+                    }
+                    result.imgAS = sizeInfo;
+                    result.imgCS = sizeInfo;
+                }
                 if (prefs.floatBar.showWithRules && result.type == "rule") {
                 } else if (!(result.imgAS.w == result.imgCS.w && result.imgAS.h == result.imgCS.h)) {//如果不是两者完全相等,那么被缩放了.
                     if (prefs.floatBar.sizeLimitOr) {
                         if (result.imgCS.h <= prefs.floatBar.minSizeLimit.h && result.imgCS.w <= prefs.floatBar.minSizeLimit.w) {//最小限定判断.
-                            return;
+                            sizeHide = true;
                         }
                     }else{
                         if (result.imgCS.h <= prefs.floatBar.minSizeLimit.h || result.imgCS.w <= prefs.floatBar.minSizeLimit.w) {//最小限定判断.
-                            return;
+                            sizeHide = true;
                         }
                     }
                 } else {
                     if (prefs.floatBar.sizeLimitOr) {
                         if (result.imgCS.w <= prefs.floatBar.forceShow.size.w && result.imgCS.h <= prefs.floatBar.forceShow.size.h) {
-                            return;
+                            sizeHide = true;
                         }
                     } else {
                         if (result.imgCS.w <= prefs.floatBar.forceShow.size.w || result.imgCS.h <= prefs.floatBar.forceShow.size.h) {
-                            return;
+                            sizeHide = true;
                         }
                     }
                 }
-            }
-
-            if (result) {
                 debug(result);
                 if (!result.noActual) {
                     if (!result.srcs) {
@@ -23161,7 +23315,7 @@ ImgOps | https://imgops.com/#b#`;
                     canclePreCTO = clickToOpen(result);
                 }
 
-                let hide = prefs.floatBar.position == "hide" ? !altKey : altKey;
+                let hide = sizeHide || (prefs.floatBar.position == "hide" ? !altKey : altKey);
                 result.hide = hide;
                 let canShow = floatBar.start(result);
                 if (!checkUniqueImgWin() && canShow) {
@@ -23325,12 +23479,12 @@ ImgOps | https://imgops.com/#b#`;
             return true;
         }
 
-        function openGallery(){
+        async function openGallery(){
             if(!gallery){
                 gallery=new GalleryC();
                 gallery.data=[];
             }
-            var allData=gallery.getAllValidImgs();
+            var allData=await gallery.getAllValidImgs();
             if(allData.length<1)return;
             gallery.data=allData;
             gallery.load(gallery.data);
@@ -23708,7 +23862,7 @@ ImgOps | https://imgops.com/#b#`;
                     "default": false,
                 },
                 'floatBar.globalkeys.command': {
-                    after: "COMMAND",
+                    after: "META",
                     type: 'checkbox',
                     className: 'sep-x',
                     "default": false,
@@ -23799,6 +23953,37 @@ ImgOps | https://imgops.com/#b#`;
                     type: 'checkbox',
                     "default": prefs.magnifier.wheelZoom.enabled,
                 },
+                'magnifier.wheelZoom.scaleImage': {
+                    label: i18n("magnifierScaleImage"),
+                    type: 'checkbox',
+                    "default": typeof prefs.magnifier.wheelZoom.scaleImage !== false,
+                },
+                'magnifier.wheelZoom.ctrl': {
+                    label: '',
+                    type: 'checkbox',
+                    after: "CTRL +",
+                    "default": false,
+                    line: 'start'
+                },
+                'magnifier.wheelZoom.alt': {
+                    after: "ALT +",
+                    type: 'checkbox',
+                    className: 'sep-x',
+                    "default": false,
+                },
+                'magnifier.wheelZoom.shift': {
+                    after: "SHIFT +",
+                    type: 'checkbox',
+                    className: 'sep-x',
+                    "default": false,
+                },
+                'magnifier.wheelZoom.meta': {
+                    after: "META",
+                    type: 'checkbox',
+                    className: 'sep-x',
+                    "default": false,
+                    line: 'end',
+                },
                 'magnifier.wheelZoom.range': {
                     label: i18n("magnifierWheelZoomRange"),
                     type: 'textarea',
@@ -23840,6 +24025,13 @@ ImgOps | https://imgops.com/#b#`;
                     type: 'checkbox',
                     "default": prefs.gallery.scrollEndToChange,
                     title: i18n("galleryScrollEndToChangeTip")
+                },
+                'gallery.backgroundColor': {
+                    label: i18n("backgroundColor"),
+                    type: 'text',
+                    className: 'color',
+                    "default": prefs.gallery.backgroundColor || 'rgba(20,20,20,0.75)',
+                    line: 'end'
                 },
                 'gallery.exportType': {
                     label: i18n("galleryExportType"),
@@ -24164,8 +24356,11 @@ ImgOps | https://imgops.com/#b#`;
                                             }
                                         },
                                         {
+                                            node: "br"
+                                        },
+                                        {
                                             node: "span",
-                                            text: " Join our "
+                                            text: "Join our "
                                         },
                                         {
                                             node: "a",
@@ -24308,11 +24503,16 @@ ImgOps | https://imgops.com/#b#`;
             }
         }
 
-        if (location.hostname == "hoothin.github.io" && location.pathname == "/UserScripts/Picviewer%20CE+/gallery.html") {
+        var configStyle = document.createElement("style");
+        configStyle.textContent = "#pv-prefs { display: initial; }";
+        configStyle.type = 'text/css';
+        if (location.hostname == "hoothin.github.io" && location.pathname == "/UserScripts/Picviewer%20CE+/") {
+            openPrefs();
+        } else if (location.hostname == "hoothin.github.io" && location.pathname == "/UserScripts/Picviewer%20CE+/gallery.html") {
             let gallery = new GalleryC();
             gallery.data = [];
             gallery.lockGallery = true;
-            var allData = gallery.getAllValidImgs();
+            var allData = await gallery.getAllValidImgs();
             gallery.data = allData;
             gallery.load(gallery.data);
             let searchParams = new URLSearchParams(location.search);
@@ -24331,8 +24531,8 @@ ImgOps | https://imgops.com/#b#`;
                 let autoViewMore=siteReg[0]=="@";
                 if(autoViewMore)siteReg=siteReg.substr(1);
                 if(new RegExp(siteReg).test(_URL)){
-                    setTimeout(function(){
-                        let gallery = openGallery();
+                    setTimeout(async function(){
+                        let gallery = await openGallery();
                         if (gallery && autoViewMore) gallery.maximizeSidebar();
                     },2000);
                     break;
@@ -24343,9 +24543,6 @@ ImgOps | https://imgops.com/#b#`;
         // 注册按键
         document.addEventListener('keydown', keydown, true);
 
-        var configStyle = document.createElement("style");
-        configStyle.textContent = "#pv-prefs { display: initial; }";
-        configStyle.type = 'text/css';
         function openPrefs() {
             let fieldsSearchData = GM_config.fields["gallery.searchData"];
             if (fieldsSearchData && fieldsSearchData.value) {
@@ -24359,11 +24556,15 @@ ImgOps | https://imgops.com/#b#`;
             GM_config.open();
 
             setTimeout(()=>{
-                if(GM_config.frame && GM_config.frame.style && GM_config.frame.style.display=="none"){
+                if (GM_config.frame && GM_config.frame.contentDocument.body.innerHTML === "") {
+                    _GM_openInTab("https://hoothin.github.io/UserScripts/Picviewer%20CE+/", {active:true});
+                    return;
+                }
+                if (GM_config.frame && GM_config.frame.style && GM_config.frame.style.display == "none") {
                     GM_config.frame.src="";
                 }
                 initKeyInputs();
-            },500);
+            }, 1000);
         }
 
         function loadPrefs() {
@@ -24391,12 +24592,14 @@ ImgOps | https://imgops.com/#b#`;
                     }
                 }
             });
-            if (localStorage) {
-                if (!storage.getItem('inited')) {
-                    localStorage.setItem('picviewerCE.config.curTab', 4);
-                    storage.setItem('inited', true);
+            try {
+                if (localStorage && localStorage.setItem) {
+                    if (!storage.getItem('inited')) {
+                        localStorage.setItem('picviewerCE.config.curTab', 4);
+                        storage.setItem('inited', true);
+                    }
                 }
-            }
+            } catch(e) {}
 
             debug = prefs.debug ? console.debug.bind(console) : function() {};
         }
@@ -24404,10 +24607,10 @@ ImgOps | https://imgops.com/#b#`;
     };
 
     function drawTobase64(img){
-        let canvas = document.createElement('CANVAS');
         canvas.width = img.naturalWidth || img.width;
         canvas.height = img.naturalHeight || img.height;
         let ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.drawImage(img, 0, 0);
         return canvas.toDataURL("image/png");
     }
@@ -24517,7 +24720,7 @@ ImgOps | https://imgops.com/#b#`;
     function getUrl(url, callback, onError){
         _GM_xmlhttpRequest({
             method: 'GET',
-            url: url,
+            url: url.trim(),
             onload: callback,
             onerror: onError
         });
